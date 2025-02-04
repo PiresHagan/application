@@ -18,8 +18,10 @@ services:
         environment:
             NODE_ENV: production
             CHOKIDAR_USEPOLLING: true
-        expose:
-            - 4000
+        restart: "always"
+        command: npm run start
+        ports:
+            - 3000:3000
         volumes:
             - './frontend:/frontend'
             - '/frontend/node_modules'
