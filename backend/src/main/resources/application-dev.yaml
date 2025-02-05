@@ -9,6 +9,13 @@ spring:
     username: user
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+    restart.poll-interval: 2s
+    restart.quiet-period: 1s
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
 

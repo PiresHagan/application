@@ -1,10 +1,21 @@
 FROM node:20.9.0-alpine
 
-RUN mkdir /frontend
 WORKDIR /frontend
 
-COPY ["./package*.json", "/frontend/"]
+# Copy package files first for better caching
+COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-COPY . ./
+# Copy the rest of the application
+COPY . .
+
+# Build the application
 RUN npm run build
+
+# Expose port 3000
+EXPOSE 3000
+
+# Start the application
+CMD ["npm", "start"]

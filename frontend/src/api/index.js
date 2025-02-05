@@ -1,38 +1,19 @@
-import axios, {AxiosError} from 'axios';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:8080/api';
 
 const api = axios.create({
-  baseURL: BACKEND_URL + ':' + BACKEND_PORT + BACKEND_CONTEXT_PATH,
-  timeout: 1000,
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-api.interceptors.request.use(
-  (config) => {
-    config.headers['Content-Type'] = 'application/json';
-    config.headers['Authorization'] = `Bearer temp`;
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
+// Add interceptors for handling errors
 api.interceptors.response.use(
-  (response) => {
-    if (response.status === 404) {
-      
-    } else if (response.status === 500) {
-
-    }
-    return response;
-  },
-  async (error) => { 
-    if (error?.code === AxiosError.ERR_NETWORK) {
-      
-    } else if (error.response?.status === 401) {
-
-    }
-
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error);
     return Promise.reject(error);
   }
 );
