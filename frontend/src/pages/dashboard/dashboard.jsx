@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -23,6 +23,7 @@ import {
   FormHelperText,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import dashboardService from '../../api/dashboardService';
 
 function Dashboard() {
   const [tabValue, setTabValue] = React.useState(0);
@@ -32,29 +33,24 @@ function Dashboard() {
       isMainOwner: true,
       ownerType: 'individual',
       sameAsMailingAddress: true,
-      addressCountry: 'us',
-      mailingAddressCountry: 'us',
-      citizenship: 'us',
-      registeredCountry: 'us',
+      addressCountry: '01',
+      mailingAddressCountry: '01',
+      citizenship: '01',
+      registeredCountry: '01',
       // Add other owner-specific fields here
     }
   ]);
   const newOwnerRef = useRef(null);
-  const [registeredCountry, setRegisteredCountry] = React.useState('us');
+  const [registeredCountry, setRegisteredCountry] = React.useState('01');
   const [formErrors, setFormErrors] = React.useState(false);
-
-  const regionsByCountry = {
-    us: [
-      { value: 'ca', label: 'California' },
-      { value: 'ny', label: 'New York' },
-      { value: 'tx', label: 'Texas' }
-    ],
-    ca: [
-      { value: 'qc', label: 'Quebec' },
-      { value: 'on', label: 'Ontario' },
-      { value: 'ab', label: 'Alberta' }
-    ]
-  };
+  const [dropdownValues, setDropdownValues] = useState({
+    countries: [],
+    states: [],
+    provinces: [],
+    gender: [],
+    tobacco: [],
+    occupation: []
+  });
 
   const businessTypes = [
     { value: 'corporation', label: 'Corporation' },
@@ -110,10 +106,10 @@ function Dashboard() {
         isMainOwner: false,
         ownerType: 'individual',
         sameAsMailingAddress: true,
-        addressCountry: 'us',
-        mailingAddressCountry: 'us',
-        citizenship: 'us',
-        registeredCountry: 'us',
+        addressCountry: '01',
+        mailingAddressCountry: '01',
+        citizenship: '01',
+        registeredCountry: '01',
         // Initialize other owner-specific fields here
       };
       setOwners([...owners, newOwner]);
@@ -208,6 +204,20 @@ function Dashboard() {
     setFormErrors(false);
     // Proceed with save logic
   };
+
+  useEffect(() => {
+    const fetchDropdownValues = async () => {
+      try {
+        const response = await dashboardService.getDropdownValues();
+        console.log('Dropdown response:', response.data);
+        setDropdownValues(response.data);
+      } catch (error) {
+        console.error('Error fetching dropdown values:', error);
+      }
+    };
+
+    fetchDropdownValues();
+  }, []);
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -323,8 +333,11 @@ function Dashboard() {
                     onChange={(e) => handleFieldChange(owner.id, 'registeredCountry', e.target.value)}
                     label="Registered Country"
                   >
-                    <MenuItem value="us">United States</MenuItem>
-                    <MenuItem value="ca">Canada</MenuItem>
+                    {dropdownValues.countries?.map((country) => (
+                      <MenuItem key={country.code} value={country.code}>
+                        {country.description}
+                      </MenuItem>
+                    ))}
                   </Select>
                   {formErrors && !owner.registeredCountry && (
                     <FormHelperText>Registered Country is required</FormHelperText>
@@ -335,21 +348,28 @@ function Dashboard() {
               {/* Registered State/Province */}
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required size="small" error={formErrors && !owner.registeredState}>
-                  <InputLabel>{owner.registeredCountry === 'us' ? 'Registered State' : 'Registered Province'}</InputLabel>
+                  <InputLabel>{owner.registeredCountry === '01' ? 'Registered State' : 'Registered Province'}</InputLabel>
                   <Select
                     value={owner.registeredState || ''}
                     onChange={(e) => handleFieldChange(owner.id, 'registeredState', e.target.value)}
-                    label={owner.registeredCountry === 'us' ? 'Registered State' : 'Registered Province'}
+                    label={owner.registeredCountry === '01' ? 'Registered State' : 'Registered Province'}
                   >
-                    {regionsByCountry[owner.registeredCountry]?.map((region) => (
-                      <MenuItem key={region.value} value={region.value}>
-                        {region.label}
-                      </MenuItem>
-                    ))}
+                    {owner.registeredCountry === '01'
+                      ? dropdownValues.states?.map((state) => (
+                        <MenuItem key={state.code} value={state.code}>
+                          {state.description}
+                        </MenuItem>
+                      ))
+                      : dropdownValues.provinces?.map((province) => (
+                        <MenuItem key={province.code} value={province.code}>
+                          {province.description}
+                        </MenuItem>
+                      ))
+                    }
                   </Select>
                   {formErrors && !owner.registeredState && (
                     <FormHelperText>
-                      {owner.registeredCountry === 'us' ? 'Registered State is required' : 'Registered Province is required'}
+                      {owner.registeredCountry === '01' ? 'Registered State is required' : 'Registered Province is required'}
                     </FormHelperText>
                   )}
                 </FormControl>
@@ -450,12 +470,15 @@ function Dashboard() {
                 <FormControl fullWidth required size="small" error={formErrors && !owner.addressCountry}>
                   <InputLabel>Country</InputLabel>
                   <Select
-                    value={owner.addressCountry || 'us'}
+                    value={owner.addressCountry || '01'}
                     onChange={(e) => handleAddressCountryChange(owner.id, e.target.value)}
                     label="Country"
                   >
-                    <MenuItem value="us">United States</MenuItem>
-                    <MenuItem value="ca">Canada</MenuItem>
+                    {dropdownValues.countries?.map((country) => (
+                      <MenuItem key={country.code} value={country.code}>
+                        {country.description}
+                      </MenuItem>
+                    ))}
                   </Select>
                   {formErrors && !owner.addressCountry && (
                     <FormHelperText>Country is required</FormHelperText>
@@ -463,22 +486,33 @@ function Dashboard() {
                 </FormControl>
               </Grid>
               <Grid item xs={12} md={3}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.addressState}>
-                  <InputLabel>{owner.addressCountry === 'us' ? 'State' : 'Province'}</InputLabel>
+                <FormControl
+                  fullWidth
+                  error={formErrors && !owner.state}
+                  size="small"
+                >
+                  <InputLabel>{owner.addressCountry === '01' ? 'State' : 'Province'}</InputLabel>
                   <Select
-                    value={owner.addressState || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'addressState', e.target.value)}
-                    label={owner.addressCountry === 'us' ? 'State' : 'Province'}
+                    value={owner.state || ''}
+                    onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
+                    label={owner.addressCountry === '01' ? 'State' : 'Province'}
                   >
-                    {regionsByCountry[owner.addressCountry]?.map((region) => (
-                      <MenuItem key={region.value} value={region.value}>
-                        {region.label}
-                      </MenuItem>
-                    ))}
+                    {owner.addressCountry === '01'
+                      ? dropdownValues.states?.map((state) => (
+                        <MenuItem key={state.code} value={state.code}>
+                          {state.description}
+                        </MenuItem>
+                      ))
+                      : dropdownValues.provinces?.map((province) => (
+                        <MenuItem key={province.code} value={province.code}>
+                          {province.description}
+                        </MenuItem>
+                      ))
+                    }
                   </Select>
-                  {formErrors && !owner.addressState && (
+                  {formErrors && !owner.state && (
                     <FormHelperText>
-                      {owner.addressCountry === 'us' ? 'State is required' : 'Province is required'}
+                      {owner.addressCountry === '01' ? 'State is required' : 'Province is required'}
                     </FormHelperText>
                   )}
                 </FormControl>
@@ -487,12 +521,12 @@ function Dashboard() {
                 <TextField
                   fullWidth
                   required
-                  placeholder={owner.addressCountry === 'us' ? 'Zip Code' : 'Postal Code'}
+                  placeholder={owner.addressCountry === '01' ? 'Zip Code' : 'Postal Code'}
                   value={owner.zipCode || ''}
                   onChange={(e) => handleFieldChange(owner.id, 'zipCode', e.target.value)}
                   error={formErrors && !owner.zipCode}
                   helperText={formErrors && !owner.zipCode
-                    ? owner.addressCountry === 'us'
+                    ? owner.addressCountry === '01'
                       ? "Zip Code is required"
                       : "Postal Code is required"
                     : ""}
@@ -562,8 +596,11 @@ function Dashboard() {
                           onChange={(e) => handleAddressCountryChange(owner.id, e.target.value, true)}
                           label="Country"
                         >
-                          <MenuItem value="us">United States</MenuItem>
-                          <MenuItem value="ca">Canada</MenuItem>
+                          {dropdownValues.countries?.map((country) => (
+                            <MenuItem key={country.code} value={country.code}>
+                              {country.description}
+                            </MenuItem>
+                          ))}
                         </Select>
                         {formErrors && !owner.mailingAddressCountry && (
                           <FormHelperText>Country is required</FormHelperText>
@@ -573,21 +610,28 @@ function Dashboard() {
 
                     <Grid item xs={12} md={3}>
                       <FormControl fullWidth required size="small" error={formErrors && !owner.mailingState}>
-                        <InputLabel>{owner.mailingAddressCountry === 'us' ? 'State' : 'Province'}</InputLabel>
+                        <InputLabel>{owner.mailingAddressCountry === '01' ? 'State' : 'Province'}</InputLabel>
                         <Select
                           value={owner.mailingState || ''}
                           onChange={(e) => handleFieldChange(owner.id, 'mailingState', e.target.value)}
-                          label={owner.mailingAddressCountry === 'us' ? 'State' : 'Province'}
+                          label={owner.mailingAddressCountry === '01' ? 'State' : 'Province'}
                         >
-                          {regionsByCountry[owner.mailingAddressCountry]?.map((region) => (
-                            <MenuItem key={region.value} value={region.value}>
-                              {region.label}
-                            </MenuItem>
-                          ))}
+                          {owner.mailingAddressCountry === '01'
+                            ? dropdownValues.states?.map((state) => (
+                              <MenuItem key={state.code} value={state.code}>
+                                {state.description}
+                              </MenuItem>
+                            ))
+                            : dropdownValues.provinces?.map((province) => (
+                              <MenuItem key={province.code} value={province.code}>
+                                {province.description}
+                              </MenuItem>
+                            ))
+                          }
                         </Select>
                         {formErrors && !owner.mailingState && (
                           <FormHelperText>
-                            {owner.mailingAddressCountry === 'us' ? 'State is required' : 'Province is required'}
+                            {owner.mailingAddressCountry === '01' ? 'State is required' : 'Province is required'}
                           </FormHelperText>
                         )}
                       </FormControl>
@@ -597,12 +641,12 @@ function Dashboard() {
                       <TextField
                         fullWidth
                         required
-                        placeholder={owner.mailingAddressCountry === 'us' ? 'Zip Code' : 'Postal Code'}
+                        placeholder={owner.mailingAddressCountry === '01' ? 'Zip Code' : 'Postal Code'}
                         value={owner.mailingZipCode || ''}
                         onChange={(e) => handleFieldChange(owner.id, 'mailingZipCode', e.target.value)}
                         error={formErrors && !owner.mailingZipCode}
                         helperText={formErrors && !owner.mailingZipCode
-                          ? owner.mailingAddressCountry === 'us'
+                          ? owner.mailingAddressCountry === '01'
                             ? "Zip Code is required"
                             : "Postal Code is required"
                           : ""}
@@ -700,12 +744,15 @@ function Dashboard() {
                 <FormControl fullWidth required size="small" error={formErrors && !owner.citizenship}>
                   <InputLabel>Citizenship</InputLabel>
                   <Select
-                    value={owner.citizenship}
+                    value={owner.citizenship || '01'}
                     onChange={(e) => handleCitizenshipChange(owner.id, e.target.value)}
                     label="Citizenship"
                   >
-                    <MenuItem value="us">United States</MenuItem>
-                    <MenuItem value="ca">Canada</MenuItem>
+                    {dropdownValues.countries?.map((country) => (
+                      <MenuItem key={country.code} value={country.code}>
+                        {country.description}
+                      </MenuItem>
+                    ))}
                   </Select>
                   {formErrors && !owner.citizenship && (
                     <FormHelperText>Citizenship is required</FormHelperText>
@@ -713,22 +760,33 @@ function Dashboard() {
                 </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.state}>
-                  <InputLabel>{owner.citizenship === 'us' ? 'State' : 'Province'}</InputLabel>
+                <FormControl
+                  fullWidth
+                  error={formErrors && !owner.state}
+                  size="small"
+                >
+                  <InputLabel>{owner.citizenship === '01' ? 'State' : 'Province'}</InputLabel>
                   <Select
                     value={owner.state || ''}
                     onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
-                    label={owner.citizenship === 'us' ? 'State' : 'Province'}
+                    label={owner.citizenship === '01' ? 'State' : 'Province'}
                   >
-                    {regionsByCountry[owner.citizenship]?.map((region) => (
-                      <MenuItem key={region.value} value={region.value}>
-                        {region.label}
-                      </MenuItem>
-                    ))}
+                    {owner.citizenship === '01'
+                      ? dropdownValues.states?.map((state) => (
+                        <MenuItem key={state.code} value={state.code}>
+                          {state.description}
+                        </MenuItem>
+                      ))
+                      : dropdownValues.provinces?.map((province) => (
+                        <MenuItem key={province.code} value={province.code}>
+                          {province.description}
+                        </MenuItem>
+                      ))
+                    }
                   </Select>
                   {formErrors && !owner.state && (
                     <FormHelperText>
-                      {owner.citizenship === 'us' ? 'State is required' : 'Province is required'}
+                      {owner.citizenship === '01' ? 'State is required' : 'Province is required'}
                     </FormHelperText>
                   )}
                 </FormControl>
@@ -894,28 +952,42 @@ function Dashboard() {
                     onChange={(e) => handleAddressCountryChange(owner.id, e.target.value)}
                     label="Country"
                   >
-                    <MenuItem value="us">United States</MenuItem>
-                    <MenuItem value="ca">Canada</MenuItem>
+                    {dropdownValues.countries?.map((country) => (
+                      <MenuItem key={country.code} value={country.code}>
+                        {country.description}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
               <Grid item xs={12} md={3}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.addressState}>
-                  <InputLabel>{owner.addressCountry === 'us' ? 'State' : 'Province'}</InputLabel>
+                <FormControl
+                  fullWidth
+                  error={formErrors && !owner.state}
+                  size="small"
+                >
+                  <InputLabel>{owner.addressCountry === '01' ? 'State' : 'Province'}</InputLabel>
                   <Select
-                    value={owner.addressState || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'addressState', e.target.value)}
-                    label={owner.addressCountry === 'us' ? 'State' : 'Province'}
+                    value={owner.state || ''}
+                    onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
+                    label={owner.addressCountry === '01' ? 'State' : 'Province'}
                   >
-                    {regionsByCountry[owner.addressCountry]?.map((region) => (
-                      <MenuItem key={region.value} value={region.value}>
-                        {region.label}
-                      </MenuItem>
-                    ))}
+                    {owner.addressCountry === '01'
+                      ? dropdownValues.states?.map((state) => (
+                        <MenuItem key={state.code} value={state.code}>
+                          {state.description}
+                        </MenuItem>
+                      ))
+                      : dropdownValues.provinces?.map((province) => (
+                        <MenuItem key={province.code} value={province.code}>
+                          {province.description}
+                        </MenuItem>
+                      ))
+                    }
                   </Select>
-                  {formErrors && !owner.addressState && (
+                  {formErrors && !owner.state && (
                     <FormHelperText>
-                      {owner.addressCountry === 'us' ? 'State is required' : 'Province is required'}
+                      {owner.addressCountry === '01' ? 'State is required' : 'Province is required'}
                     </FormHelperText>
                   )}
                 </FormControl>
@@ -924,12 +996,12 @@ function Dashboard() {
                 <TextField
                   fullWidth
                   required
-                  placeholder={owner.addressCountry === 'us' ? 'Zip Code' : 'Postal Code'}
+                  placeholder={owner.addressCountry === '01' ? 'Zip Code' : 'Postal Code'}
                   value={owner.zipCode || ''}
                   onChange={(e) => handleFieldChange(owner.id, 'zipCode', e.target.value)}
                   error={formErrors && !owner.zipCode}
                   helperText={formErrors && !owner.zipCode
-                    ? owner.addressCountry === 'us'
+                    ? owner.addressCountry === '01'
                       ? "Zip Code is required"
                       : "Postal Code is required"
                     : ""}
@@ -999,8 +1071,11 @@ function Dashboard() {
                           onChange={(e) => handleAddressCountryChange(owner.id, e.target.value, true)}
                           label="Country"
                         >
-                          <MenuItem value="us">United States</MenuItem>
-                          <MenuItem value="ca">Canada</MenuItem>
+                          {dropdownValues.countries?.map((country) => (
+                            <MenuItem key={country.code} value={country.code}>
+                              {country.description}
+                            </MenuItem>
+                          ))}
                         </Select>
                         {formErrors && !owner.mailingAddressCountry && (
                           <FormHelperText>Country is required</FormHelperText>
@@ -1010,21 +1085,28 @@ function Dashboard() {
 
                     <Grid item xs={12} md={3}>
                       <FormControl fullWidth required size="small" error={formErrors && !owner.mailingState}>
-                        <InputLabel>{owner.mailingAddressCountry === 'us' ? 'State' : 'Province'}</InputLabel>
+                        <InputLabel>{owner.mailingAddressCountry === '01' ? 'State' : 'Province'}</InputLabel>
                         <Select
                           value={owner.mailingState || ''}
                           onChange={(e) => handleFieldChange(owner.id, 'mailingState', e.target.value)}
-                          label={owner.mailingAddressCountry === 'us' ? 'State' : 'Province'}
+                          label={owner.mailingAddressCountry === '01' ? 'State' : 'Province'}
                         >
-                          {regionsByCountry[owner.mailingAddressCountry]?.map((region) => (
-                            <MenuItem key={region.value} value={region.value}>
-                              {region.label}
-                            </MenuItem>
-                          ))}
+                          {owner.mailingAddressCountry === '01'
+                            ? dropdownValues.states?.map((state) => (
+                              <MenuItem key={state.code} value={state.code}>
+                                {state.description}
+                              </MenuItem>
+                            ))
+                            : dropdownValues.provinces?.map((province) => (
+                              <MenuItem key={province.code} value={province.code}>
+                                {province.description}
+                              </MenuItem>
+                            ))
+                          }
                         </Select>
                         {formErrors && !owner.mailingState && (
                           <FormHelperText>
-                            {owner.mailingAddressCountry === 'us' ? 'State is required' : 'Province is required'}
+                            {owner.mailingAddressCountry === '01' ? 'State is required' : 'Province is required'}
                           </FormHelperText>
                         )}
                       </FormControl>
@@ -1034,12 +1116,12 @@ function Dashboard() {
                       <TextField
                         fullWidth
                         required
-                        placeholder={owner.mailingAddressCountry === 'us' ? 'Zip Code' : 'Postal Code'}
+                        placeholder={owner.mailingAddressCountry === '01' ? 'Zip Code' : 'Postal Code'}
                         value={owner.mailingZipCode || ''}
                         onChange={(e) => handleFieldChange(owner.id, 'mailingZipCode', e.target.value)}
                         error={formErrors && !owner.mailingZipCode}
                         helperText={formErrors && !owner.mailingZipCode
-                          ? owner.mailingAddressCountry === 'us'
+                          ? owner.mailingAddressCountry === '01'
                             ? "Zip Code is required"
                             : "Postal Code is required"
                           : ""}
