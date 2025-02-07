@@ -127,11 +127,27 @@ function Dashboard() {
   };
 
   const handleFieldChange = (ownerId, fieldName, value) => {
+    // Update the owner's field
     setOwners(owners.map(owner =>
       owner.id === ownerId
         ? { ...owner, [fieldName]: value }
         : owner
     ));
+
+    // Check if all required fields are filled
+    const updatedOwners = owners.map(owner =>
+      owner.id === ownerId
+        ? { ...owner, [fieldName]: value }
+        : owner
+    );
+
+    // Validate all owners
+    const isValid = updatedOwners.every(owner => validateForm(owner));
+
+    // Clear form errors if all fields are valid
+    if (isValid) {
+      setFormErrors(false);
+    }
   };
 
   const handleCitizenshipChange = (ownerId, value) => {
@@ -963,13 +979,13 @@ function Dashboard() {
               <Grid item xs={12} md={3}>
                 <FormControl
                   fullWidth
-                  error={formErrors && !owner.state}
+                  error={formErrors && !owner.addressState}
                   size="small"
                 >
                   <InputLabel>{owner.addressCountry === '01' ? 'State' : 'Province'}</InputLabel>
                   <Select
-                    value={owner.state || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
+                    value={owner.addressState || ''}
+                    onChange={(e) => handleFieldChange(owner.id, 'addressState', e.target.value)}
                     label={owner.addressCountry === '01' ? 'State' : 'Province'}
                   >
                     {owner.addressCountry === '01'
@@ -985,7 +1001,7 @@ function Dashboard() {
                       ))
                     }
                   </Select>
-                  {formErrors && !owner.state && (
+                  {formErrors && !owner.addressState && (
                     <FormHelperText>
                       {owner.addressCountry === '01' ? 'State is required' : 'Province is required'}
                     </FormHelperText>
