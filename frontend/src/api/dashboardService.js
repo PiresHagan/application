@@ -13,6 +13,11 @@ const api = axios.create({
 const dashboardService = {
   getDropdownValues: () => {
     return api.get('/api/dropdowns');
+  },
+  
+  // Add the new saveOwners method
+  saveOwners: (ownerData) => {
+    return api.post('/api/owners', ownerData);
   }
 };
 

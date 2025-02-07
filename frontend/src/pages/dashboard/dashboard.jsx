@@ -31,7 +31,7 @@ function Dashboard() {
     {
       id: 1,
       isMainOwner: true,
-      ownerType: 'individual',
+      ownerType: '01',
       sameAsMailingAddress: true,
       addressCountry: '01',
       mailingAddressCountry: '01',
@@ -41,7 +41,6 @@ function Dashboard() {
     }
   ]);
   const newOwnerRef = useRef(null);
-  const [registeredCountry, setRegisteredCountry] = React.useState('01');
   const [formErrors, setFormErrors] = React.useState(false);
   const [dropdownValues, setDropdownValues] = useState({
     countries: [],
@@ -51,6 +50,7 @@ function Dashboard() {
     tobacco: [],
     occupation: []
   });
+  const [applicationNumber, setApplicationNumber] = useState('');
 
   const businessTypes = [
     { value: 'corporation', label: 'Corporation' },
@@ -104,16 +104,14 @@ function Dashboard() {
       const newOwner = {
         id: owners.length + 1,
         isMainOwner: false,
-        ownerType: 'individual',
+        ownerType: '01',
         sameAsMailingAddress: true,
         addressCountry: '01',
         mailingAddressCountry: '01',
         citizenship: '01',
         registeredCountry: '01',
-        // Initialize other owner-specific fields here
       };
       setOwners([...owners, newOwner]);
-      // Reset form errors when adding new owner
       setFormErrors(false);
 
       setTimeout(() => {
@@ -134,20 +132,20 @@ function Dashboard() {
         : owner
     ));
 
-    // Check if all required fields are filled
-    const updatedOwners = owners.map(owner =>
-      owner.id === ownerId
-        ? { ...owner, [fieldName]: value }
-        : owner
-    );
+    // // Check if all required fields are filled
+    // const updatedOwners = owners.map(owner =>
+    //   owner.id === ownerId
+    //     ? { ...owner, [fieldName]: value }
+    //     : owner
+    // );
 
-    // Validate all owners
-    const isValid = updatedOwners.every(owner => validateForm(owner));
+    // // Validate all owners
+    // const isValid = updatedOwners.every(owner => validateForm(owner));
 
-    // Clear form errors if all fields are valid
-    if (isValid) {
-      setFormErrors(false);
-    }
+    // // Clear form errors if all fields are valid
+    // if (isValid) {
+    //   setFormErrors(false);
+    // }
   };
 
   const handleCitizenshipChange = (ownerId, value) => {
@@ -160,13 +158,11 @@ function Dashboard() {
 
   const validateForm = (owner) => {
     const commonFields = {
-      // Fields common to both individual and corporate
       addressLine1: owner.addressLine1,
       city: owner.city,
       addressCountry: owner.addressCountry,
       addressState: owner.addressState,
       zipCode: owner.zipCode,
-      // ... other common fields
     };
 
     const corporateFields = {
@@ -183,12 +179,11 @@ function Dashboard() {
       lastName: owner.lastName,
       dateOfBirth: owner.dateOfBirth,
       gender: owner.gender,
-      // ... other individual fields
     };
 
     const requiredFields = {
       ...commonFields,
-      ...(owner.ownerType === 'corporate' ? corporateFields : individualFields),
+      ...(owner.ownerType === '02' ? corporateFields : individualFields),
       // Add mailing address fields if needed
       ...((!owner.sameAsMailingAddress) && {
         mailingAddressLine1: owner.mailingAddressLine1,
@@ -198,6 +193,7 @@ function Dashboard() {
         mailingZipCode: owner.mailingZipCode
       })
     };
+    console.log(requiredFields);
 
     // Check if any required field is empty
     const hasEmptyFields = Object.entries(requiredFields).some(
@@ -207,18 +203,60 @@ function Dashboard() {
     return !hasEmptyFields;
   };
 
-  const handleSaveAndContinue = () => {
+  const handleSubmit = async () => {
     const isValid = owners.every(owner => validateForm(owner));
-    console.log(owners);
 
     if (!isValid) {
       setFormErrors(true);
-      // Show error message
       return;
     }
 
-    setFormErrors(false);
-    // Proceed with save logic
+    try {
+      const ownerRequest = {
+        applicationFormNumber: applicationNumber,
+        owners: owners.map(owner => ({
+          typeCode: owner.ownerType,
+          ...(owner.ownerType === '01' ? {
+            firstName: owner.firstName,
+            lastName: owner.lastName,
+            dateOfBirth: owner.dateOfBirth,
+            gender: owner.gender,
+            tobacco: owner.tobaccoStatus,
+            ssn: owner.ssn,
+          } : {
+            companyName: owner.companyName,
+            businessRegistrationNumber: owner.businessRegistration,
+          }),
+          countryCode: owner.citizenship,
+          stateCode: owner.state,
+          addresses: [
+            {
+              typeCode: "01", // Primary address
+              addressLine1: owner.addressLine1,
+              addressLine2: owner.addressLine2,
+              city: owner.city,
+              stateCode: owner.addressState,
+              countryCode: owner.addressCountry,
+              zipCode: owner.zipCode
+            },
+            ...(!owner.sameAsMailingAddress ? [{
+              typeCode: "02",
+              addressLine1: owner.mailingAddressLine1,
+              addressLine2: owner.mailingAddressLine2,
+              city: owner.mailingCity,
+              stateCode: owner.mailingState,
+              countryCode: owner.mailingAddressCountry,
+              zipCode: owner.mailingZipCode
+            }] : [])
+          ]
+        }))
+      };
+
+      await dashboardService.saveOwners(ownerRequest);
+      setFormErrors(false);
+    } catch (error) {
+      console.error('Error saving owners:', error);
+    }
   };
 
   useEffect(() => {
@@ -233,6 +271,15 @@ function Dashboard() {
     };
 
     fetchDropdownValues();
+  }, []);
+
+  useEffect(() => {
+    const generateApplicationNumber = () => {
+      const randomNum = Math.floor(100000 + Math.random() * 900000); // Generates 6-digit number
+      return randomNum;
+    };
+
+    setApplicationNumber(generateApplicationNumber());
   }, []);
 
   return (
@@ -250,7 +297,7 @@ function Dashboard() {
             color: 'text.secondary'
           }}
         >
-          Application Number: APP859261
+          Application Number: APP{applicationNumber}
         </Typography>
 
         <Divider
@@ -313,18 +360,18 @@ function Dashboard() {
             sx={{ mb: 3 }}
           >
             <FormControlLabel
-              value="individual"
+              value="01"
               control={<Radio />}
               label="Individual"
             />
             <FormControlLabel
-              value="corporate"
+              value="02"
               control={<Radio />}
               label="Corporate"
             />
           </RadioGroup>
 
-          {owner.ownerType === 'corporate' ? (
+          {owner.ownerType === '02' ? (
             <Grid container spacing={2}>
               {/* Company Name */}
               <Grid item xs={12}>
@@ -509,8 +556,8 @@ function Dashboard() {
                 >
                   <InputLabel>{owner.addressCountry === '01' ? 'State' : 'Province'}</InputLabel>
                   <Select
-                    value={owner.state || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
+                    value={owner.addressState || ''}
+                    onChange={(e) => handleFieldChange(owner.id, 'addressState', e.target.value)}
                     label={owner.addressCountry === '01' ? 'State' : 'Province'}
                   >
                     {owner.addressCountry === '01'
@@ -526,7 +573,7 @@ function Dashboard() {
                       ))
                     }
                   </Select>
-                  {formErrors && !owner.state && (
+                  {formErrors && !owner.addressState && (
                     <FormHelperText>
                       {owner.addressCountry === '01' ? 'State is required' : 'Province is required'}
                     </FormHelperText>
@@ -1177,7 +1224,7 @@ function Dashboard() {
         </Button>
         <Button
           variant="contained"
-          onClick={handleSaveAndContinue}
+          onClick={handleSubmit}
         >
           SAVE AND CONTINUE
         </Button>
