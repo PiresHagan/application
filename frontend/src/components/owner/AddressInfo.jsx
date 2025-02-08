@@ -43,10 +43,11 @@ const AddressInfo = ({
           fullWidth
           required
           placeholder="City"
-          value={owner.city || ''}
-          onChange={(e) => handleFieldChange(owner.id, 'city', e.target.value)}
-          error={formErrors && !owner.city}
+          value={owner.addressCity || ''}
+          onChange={(e) => handleFieldChange(owner.id, 'addressCity', e.target.value)}
+          error={formErrors && !owner.addressCity}
           size="small"
+
         />
       </Grid>
       <Grid item xs={12} md={3}>
@@ -98,10 +99,11 @@ const AddressInfo = ({
           fullWidth
           required
           placeholder={owner.addressCountry === '01' ? 'Zip Code' : 'Postal Code'}
-          value={owner.zipCode || ''}
-          onChange={(e) => handleFieldChange(owner.id, 'zipCode', e.target.value)}
-          error={formErrors && !owner.zipCode}
+          value={owner.addressZipCode || ''}
+          onChange={(e) => handleFieldChange(owner.id, 'addressZipCode', e.target.value)}
+          error={formErrors && !owner.addressZipCode}
           size="small"
+
         />
       </Grid>
 

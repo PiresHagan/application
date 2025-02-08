@@ -31,9 +31,7 @@ function Dashboard() {
       sameAsMailingAddress: true,
       addressCountry: '01',
       mailingAddressCountry: '01',
-      citizenship: '01',
-      registeredCountry: '01',
-      // Add other owner-specific fields here
+      countryCode: '01',
     }
   ]);
   const newOwnerRef = useRef(null);
@@ -62,10 +60,10 @@ function Dashboard() {
         sameAsMailingAddress: true,
         addressCountry: '01',
         mailingAddressCountry: '01',
-        citizenship: '01',
-        registeredCountry: '01',
+        countryCode: '01',
       };
       setOwners([...owners, newOwner]);
+
       setFormErrors(false);
 
       setTimeout(() => {
@@ -107,16 +105,16 @@ function Dashboard() {
   const validateForm = (owner) => {
     const commonFields = {
       addressLine1: owner.addressLine1,
-      city: owner.city,
+      addressCity: owner.addressCity,
       addressCountry: owner.addressCountry,
       addressState: owner.addressState,
-      zipCode: owner.zipCode,
+      addressZipCode: owner.addressZipCode,
+      countryCode: owner.countryCode,
+      state: owner.state,
     };
 
     const corporateFields = {
       companyName: owner.companyName,
-      registeredCountry: owner.registeredCountry,
-      registeredState: owner.registeredState,
       businessRegistration: owner.businessRegistration,
       businessType: owner.businessType,
       relationshipToInsured: owner.relationshipToInsured
@@ -127,7 +125,17 @@ function Dashboard() {
       lastName: owner.lastName,
       dateOfBirth: owner.dateOfBirth,
       gender: owner.gender,
+      tobacco: owner.tobacco,
+      ssn: owner.ssn,
+      employer: owner.employer,
+      occupation: owner.occupation,
+      netWorth: owner.netWorth,
+      annualIncome: owner.annualIncome,
+      primaryPhone: owner.primaryPhone,
+      alternatePhone: owner.alternatePhone,
+      email: owner.email,
     };
+
 
     const requiredFields = {
       ...commonFields,
@@ -169,23 +177,30 @@ function Dashboard() {
             lastName: owner.lastName,
             dateOfBirth: owner.dateOfBirth,
             gender: owner.gender,
-            tobacco: owner.tobaccoStatus,
+            tobacco: owner.tobacco,
             ssn: owner.ssn,
+            employer: owner.employer,
+            occupation: owner.occupation,
+            netWorth: owner.netWorth,
+            annualIncome: owner.annualIncome,
           } : {
             companyName: owner.companyName,
             businessRegistrationNumber: owner.businessRegistration,
+            businessType: owner.businessType,
+            relationshipToInsured: owner.relationshipToInsured,
           }),
-          countryCode: owner.citizenship,
+          countryCode: owner.countryCode,
           stateCode: owner.state,
           addresses: [
             {
               typeCode: "01", // Primary address
               addressLine1: owner.addressLine1,
               addressLine2: owner.addressLine2,
-              city: owner.city,
+              city: owner.addressCity,
               stateCode: owner.addressState,
               countryCode: owner.addressCountry,
-              zipCode: owner.zipCode
+              zipCode: owner.addressZipCode
+
             },
             ...(!owner.sameAsMailingAddress ? [{
               typeCode: "02",
@@ -199,6 +214,8 @@ function Dashboard() {
           ]
         }))
       };
+
+      console.log(ownerRequest);
 
       await dashboardService.saveOwners(ownerRequest);
       setFormErrors(false);

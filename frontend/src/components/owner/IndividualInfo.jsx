@@ -66,11 +66,11 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
 
       {/* Tobacco Status */}
       <Grid item xs={12} md={4}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.tobaccoStatus}>
+        <FormControl fullWidth required size="small" error={formErrors && !owner.tobacco}>
           <InputLabel>Tobacco Status</InputLabel>
           <Select
-            value={owner.tobaccoStatus || ''}
-            onChange={(e) => handleFieldChange(owner.id, 'tobaccoStatus', e.target.value)}
+            value={owner.tobacco || ''}
+            onChange={(e) => handleFieldChange(owner.id, 'tobacco', e.target.value)}
             label="Tobacco Status"
           >
             <MenuItem value="yes">Smoker</MenuItem>
@@ -80,11 +80,11 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
       </Grid>
 
       <Grid item xs={12} md={4}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.citizenship}>
+        <FormControl fullWidth required size="small" error={formErrors && !owner.countryCode}>
           <InputLabel>Citizenship</InputLabel>
           <Select
-            value={owner.citizenship || '01'}
-            onChange={(e) => handleFieldChange(owner.id, 'citizenship', e.target.value)}
+            value={owner.countryCode || '01'}
+            onChange={(e) => handleFieldChange(owner.id, 'countryCode', e.target.value)}
             label="Citizenship"
           >
 
@@ -102,17 +102,18 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           error={formErrors && !owner.state}
           size="small"
         >
-          <InputLabel>{owner.citizenship === '01' ? 'State' : 'Province'}</InputLabel>
+          <InputLabel>{owner.countryCode === '01' ? 'State' : 'Province'}</InputLabel>
           <Select
             value={owner.state || ''}
             onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
-            label={owner.citizenship === '01' ? 'State' : 'Province'}
+            label={owner.countryCode === '01' ? 'State' : 'Province'}
           >
-            {owner.citizenship === '01'
+            {owner.countryCode === '01'
               ? dropdownValues.states?.map((state) => (
                 <MenuItem key={state.code} value={state.code}>
                   {state.description}
                 </MenuItem>
+
               ))
               : dropdownValues.provinces?.map((province) => (
                 <MenuItem key={province.code} value={province.code}>

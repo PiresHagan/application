@@ -35,13 +35,14 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
 
       {/* Registered Country */}
       <Grid item xs={12} md={6}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.registeredCountry}>
+        <FormControl fullWidth required size="small" error={formErrors && !owner.countryCode}>
           <InputLabel>Registered Country</InputLabel>
           <Select
-            value={owner.registeredCountry || ''}
-            onChange={(e) => handleFieldChange(owner.id, 'registeredCountry', e.target.value)}
+            value={owner.countryCode || ''}
+            onChange={(e) => handleFieldChange(owner.id, 'countryCode', e.target.value)}
             label="Registered Country"
           >
+
             {dropdownValues.countries?.map((country) => (
               <MenuItem key={country.code} value={country.code}>
                 {country.description}
@@ -53,16 +54,18 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
 
       {/* Registered State/Province */}
       <Grid item xs={12} md={6}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.registeredState}>
-          <InputLabel>{owner.registeredCountry === '01' ? 'Registered State' : 'Registered Province'}</InputLabel>
+        <FormControl fullWidth required size="small" error={formErrors && !owner.state}>
+          <InputLabel>{owner.countryCode === '01' ? 'Registered State' : 'Registered Province'}</InputLabel>
           <Select
-            value={owner.registeredState || ''}
-            onChange={(e) => handleFieldChange(owner.id, 'registeredState', e.target.value)}
-            label={owner.registeredCountry === '01' ? 'Registered State' : 'Registered Province'}
+            value={owner.state || ''}
+            onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
+            label={owner.countryCode === '01' ? 'Registered State' : 'Registered Province'}
           >
-            {owner.registeredCountry === '01'
+
+            {owner.countryCode === '01'
               ? dropdownValues.states?.map((state) => (
                 <MenuItem key={state.code} value={state.code}>
+
                   {state.description}
                 </MenuItem>
               ))
