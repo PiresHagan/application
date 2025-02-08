@@ -8,23 +8,19 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  Checkbox,
   Button,
   Divider,
   Grid,
   IconButton,
   Alert,
-  FormHelperText,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import dashboardService from '../../api/dashboardService';
-
+import IndividualInfo from '../../components/owner/IndividualInfo';
+import OccupationInfo from '../../components/owner/OccupationInfo';
+import CorporateInfo from '../../components/owner/CorporateInfo';
+import AddressInfo from '../../components/owner/AddressInfo';
+import ContactInfo from '../../components/owner/ContactInfo';
 function Dashboard() {
   const [tabValue, setTabValue] = React.useState(0);
   const [owners, setOwners] = React.useState([
@@ -51,52 +47,10 @@ function Dashboard() {
     occupation: []
   });
   const [applicationNumber, setApplicationNumber] = useState('');
-
-  const businessTypes = [
-    { value: 'corporation', label: 'Corporation' },
-    { value: 'partnership', label: 'Partnership' },
-    { value: 'llc', label: 'LLC' },
-    { value: 'soleProprietor', label: 'Sole Proprietor' }
-  ];
-
-  const relationships = [
-    { value: 'employee', label: 'Employee/Executive' },
-    { value: 'coOwner', label: 'Co-Owner/Partner' },
-    { value: 'shareholder', label: 'Shareholder/Investor' },
-    { value: 'subsidiary', label: 'Subsidiary Executive' },
-    { value: 'portfolio', label: 'Key Executives in Portfolio Companies' },
-    { value: 'owner', label: 'Insured Individual or Business Owner' }
-  ];
+  const mailingAddressRef = useRef(null);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
-  };
-
-  const handleOwnerTypeChange = (ownerId, newType) => {
-    setOwners(owners.map(owner =>
-      owner.id === ownerId
-        ? { ...owner, ownerType: newType }
-        : owner
-    ));
-  };
-
-  const handleSameAsMailingAddressChange = (ownerId, checked) => {
-    setOwners(owners.map(owner =>
-      owner.id === ownerId
-        ? { ...owner, sameAsMailingAddress: checked }
-        : owner
-    ));
-  };
-
-  const handleAddressCountryChange = (ownerId, country, isMailingAddress = false) => {
-    setOwners(owners.map(owner =>
-      owner.id === ownerId
-        ? {
-          ...owner,
-          [isMailingAddress ? 'mailingAddressCountry' : 'addressCountry']: country
-        }
-        : owner
-    ));
   };
 
   const handleAddOwner = () => {
@@ -124,34 +78,28 @@ function Dashboard() {
     setOwners(owners.filter(owner => owner.id !== ownerId));
   };
 
+  const handleSameAsMailingAddressChange = (ownerId, checked) => {
+    setOwners(owners.map(owner =>
+      owner.id === ownerId
+        ? { ...owner, sameAsMailingAddress: checked }
+        : owner
+    ));
+
+    if (!checked) {
+      setTimeout(() => {
+        mailingAddressRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100);
+    }
+  };
+
   const handleFieldChange = (ownerId, fieldName, value) => {
     // Update the owner's field
     setOwners(owners.map(owner =>
       owner.id === ownerId
         ? { ...owner, [fieldName]: value }
-        : owner
-    ));
-
-    // // Check if all required fields are filled
-    // const updatedOwners = owners.map(owner =>
-    //   owner.id === ownerId
-    //     ? { ...owner, [fieldName]: value }
-    //     : owner
-    // );
-
-    // // Validate all owners
-    // const isValid = updatedOwners.every(owner => validateForm(owner));
-
-    // // Clear form errors if all fields are valid
-    // if (isValid) {
-    //   setFormErrors(false);
-    // }
-  };
-
-  const handleCitizenshipChange = (ownerId, value) => {
-    setOwners(owners.map(owner =>
-      owner.id === ownerId
-        ? { ...owner, citizenship: value }
         : owner
     ));
   };
@@ -356,7 +304,7 @@ function Dashboard() {
           <RadioGroup
             row
             value={owner.ownerType}
-            onChange={(e) => handleOwnerTypeChange(owner.id, e.target.value)}
+            onChange={(e) => handleFieldChange(owner.id, 'ownerType', e.target.value)}
             sx={{ mb: 3 }}
           >
             <FormControlLabel
@@ -371,832 +319,56 @@ function Dashboard() {
             />
           </RadioGroup>
 
-          {owner.ownerType === '02' ? (
-            <Grid container spacing={2}>
-              {/* Company Name */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Company Name"
-                  value={owner.companyName || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'companyName', e.target.value)}
-                  error={formErrors && !owner.companyName}
-                  helperText={formErrors && !owner.companyName ? "Company Name is required" : ""}
-                  size="small"
+          {owner.ownerType === '01' ? (
+            <>
+              <Box sx={{ mb: 2 }}>
+                <IndividualInfo
+                  owner={owner}
+                  formErrors={formErrors}
+                  dropdownValues={dropdownValues}
+                  handleFieldChange={handleFieldChange}
                 />
-              </Grid>
+              </Box>
 
-              {/* Registered Country */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.registeredCountry}>
-                  <InputLabel>Registered Country</InputLabel>
-                  <Select
-                    value={owner.registeredCountry || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'registeredCountry', e.target.value)}
-                    label="Registered Country"
-                  >
-                    {dropdownValues.countries?.map((country) => (
-                      <MenuItem key={country.code} value={country.code}>
-                        {country.description}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors && !owner.registeredCountry && (
-                    <FormHelperText>Registered Country is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Registered State/Province */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.registeredState}>
-                  <InputLabel>{owner.registeredCountry === '01' ? 'Registered State' : 'Registered Province'}</InputLabel>
-                  <Select
-                    value={owner.registeredState || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'registeredState', e.target.value)}
-                    label={owner.registeredCountry === '01' ? 'Registered State' : 'Registered Province'}
-                  >
-                    {owner.registeredCountry === '01'
-                      ? dropdownValues.states?.map((state) => (
-                        <MenuItem key={state.code} value={state.code}>
-                          {state.description}
-                        </MenuItem>
-                      ))
-                      : dropdownValues.provinces?.map((province) => (
-                        <MenuItem key={province.code} value={province.code}>
-                          {province.description}
-                        </MenuItem>
-                      ))
-                    }
-                  </Select>
-                  {formErrors && !owner.registeredState && (
-                    <FormHelperText>
-                      {owner.registeredCountry === '01' ? 'Registered State is required' : 'Registered Province is required'}
-                    </FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Business Registration */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Business Registration Number"
-                  value={owner.businessRegistration || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'businessRegistration', e.target.value)}
-                  error={formErrors && !owner.businessRegistration}
-                  helperText={formErrors && !owner.businessRegistration ? "Business Registration Number is required" : ""}
-                  size="small"
+              <Box sx={{ mb: 2 }}>
+                <OccupationInfo
+                  owner={owner}
+                  formErrors={formErrors}
+                  handleFieldChange={handleFieldChange}
                 />
-              </Grid>
+              </Box>
 
-              {/* Business Type */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.businessType}>
-                  <InputLabel>Business Type</InputLabel>
-                  <Select
-                    value={owner.businessType || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'businessType', e.target.value)}
-                    label="Business Type"
-                  >
-                    {businessTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors && !owner.businessType && (
-                    <FormHelperText>Business Type is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Relationship to Insured */}
-              <Grid item xs={12}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.relationshipToInsured}>
-                  <InputLabel>Relationship to Insured</InputLabel>
-                  <Select
-                    value={owner.relationshipToInsured || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'relationshipToInsured', e.target.value)}
-                    label="Relationship to Insured"
-                  >
-                    {relationships.map((rel) => (
-                      <MenuItem key={rel.value} value={rel.value}>
-                        {rel.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors && !owner.relationshipToInsured && (
-                    <FormHelperText>Relationship to Insured is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Primary Address */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Address Line 1"
-                  value={owner.addressLine1 || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'addressLine1', e.target.value)}
-                  error={formErrors && !owner.addressLine1}
-                  helperText={formErrors && !owner.addressLine1 ? "Address Line 1 is required" : ""}
-                  size="small"
+              <Box sx={{ mb: 2 }}>
+                <ContactInfo
+                  owner={owner}
+                  formErrors={formErrors}
+                  handleFieldChange={handleFieldChange}
                 />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  placeholder="Address Line 2"
-                  value={owner.addressLine2 || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'addressLine2', e.target.value)}
-                  size="small"
-                />
-              </Grid>
-
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="City"
-                  value={owner.city || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'city', e.target.value)}
-                  error={formErrors && !owner.city}
-                  helperText={formErrors && !owner.city ? "City is required" : ""}
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.addressCountry}>
-                  <InputLabel>Country</InputLabel>
-                  <Select
-                    value={owner.addressCountry || '01'}
-                    onChange={(e) => handleAddressCountryChange(owner.id, e.target.value)}
-                    label="Country"
-                  >
-                    {dropdownValues.countries?.map((country) => (
-                      <MenuItem key={country.code} value={country.code}>
-                        {country.description}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors && !owner.addressCountry && (
-                    <FormHelperText>Country is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <FormControl
-                  fullWidth
-                  error={formErrors && !owner.state}
-                  size="small"
-                >
-                  <InputLabel>{owner.addressCountry === '01' ? 'State' : 'Province'}</InputLabel>
-                  <Select
-                    value={owner.addressState || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'addressState', e.target.value)}
-                    label={owner.addressCountry === '01' ? 'State' : 'Province'}
-                  >
-                    {owner.addressCountry === '01'
-                      ? dropdownValues.states?.map((state) => (
-                        <MenuItem key={state.code} value={state.code}>
-                          {state.description}
-                        </MenuItem>
-                      ))
-                      : dropdownValues.provinces?.map((province) => (
-                        <MenuItem key={province.code} value={province.code}>
-                          {province.description}
-                        </MenuItem>
-                      ))
-                    }
-                  </Select>
-                  {formErrors && !owner.addressState && (
-                    <FormHelperText>
-                      {owner.addressCountry === '01' ? 'State is required' : 'Province is required'}
-                    </FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder={owner.addressCountry === '01' ? 'Zip Code' : 'Postal Code'}
-                  value={owner.zipCode || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'zipCode', e.target.value)}
-                  error={formErrors && !owner.zipCode}
-                  helperText={formErrors && !owner.zipCode
-                    ? owner.addressCountry === '01'
-                      ? "Zip Code is required"
-                      : "Postal Code is required"
-                    : ""}
-                  size="small"
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={owner.sameAsMailingAddress}
-                      onChange={(e) => handleSameAsMailingAddressChange(owner.id, e.target.checked)}
-                    />
-                  }
-                  label="Same as Mailing Address"
-                />
-              </Grid>
-
-              {!owner.sameAsMailingAddress && (
-                <>
-                  <Typography variant="subtitle1" sx={{ mt: 3, mb: 2 }}>
-                    Mailing Address
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        required
-                        placeholder="Address Line 1"
-                        value={owner.mailingAddressLine1 || ''}
-                        onChange={(e) => handleFieldChange(owner.id, 'mailingAddressLine1', e.target.value)}
-                        error={formErrors && !owner.mailingAddressLine1}
-                        helperText={formErrors && !owner.mailingAddressLine1 ? "Address Line 1 is required" : ""}
-                        size="small"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        placeholder="Address Line 2"
-                        value={owner.mailingAddressLine2 || ''}
-                        onChange={(e) => handleFieldChange(owner.id, 'mailingAddressLine2', e.target.value)}
-                        size="small"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        required
-                        placeholder="City"
-                        value={owner.mailingCity || ''}
-                        onChange={(e) => handleFieldChange(owner.id, 'mailingCity', e.target.value)}
-                        error={formErrors && !owner.mailingCity}
-                        helperText={formErrors && !owner.mailingCity ? "City is required" : ""}
-                        size="small"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <FormControl fullWidth required size="small" error={formErrors && !owner.mailingAddressCountry}>
-                        <InputLabel>Country</InputLabel>
-                        <Select
-                          value={owner.mailingAddressCountry}
-                          onChange={(e) => handleAddressCountryChange(owner.id, e.target.value, true)}
-                          label="Country"
-                        >
-                          {dropdownValues.countries?.map((country) => (
-                            <MenuItem key={country.code} value={country.code}>
-                              {country.description}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        {formErrors && !owner.mailingAddressCountry && (
-                          <FormHelperText>Country is required</FormHelperText>
-                        )}
-                      </FormControl>
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <FormControl fullWidth required size="small" error={formErrors && !owner.mailingState}>
-                        <InputLabel>{owner.mailingAddressCountry === '01' ? 'State' : 'Province'}</InputLabel>
-                        <Select
-                          value={owner.mailingState || ''}
-                          onChange={(e) => handleFieldChange(owner.id, 'mailingState', e.target.value)}
-                          label={owner.mailingAddressCountry === '01' ? 'State' : 'Province'}
-                        >
-                          {owner.mailingAddressCountry === '01'
-                            ? dropdownValues.states?.map((state) => (
-                              <MenuItem key={state.code} value={state.code}>
-                                {state.description}
-                              </MenuItem>
-                            ))
-                            : dropdownValues.provinces?.map((province) => (
-                              <MenuItem key={province.code} value={province.code}>
-                                {province.description}
-                              </MenuItem>
-                            ))
-                          }
-                        </Select>
-                        {formErrors && !owner.mailingState && (
-                          <FormHelperText>
-                            {owner.mailingAddressCountry === '01' ? 'State is required' : 'Province is required'}
-                          </FormHelperText>
-                        )}
-                      </FormControl>
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        required
-                        placeholder={owner.mailingAddressCountry === '01' ? 'Zip Code' : 'Postal Code'}
-                        value={owner.mailingZipCode || ''}
-                        onChange={(e) => handleFieldChange(owner.id, 'mailingZipCode', e.target.value)}
-                        error={formErrors && !owner.mailingZipCode}
-                        helperText={formErrors && !owner.mailingZipCode
-                          ? owner.mailingAddressCountry === '01'
-                            ? "Zip Code is required"
-                            : "Postal Code is required"
-                          : ""}
-                        size="small"
-                      />
-                    </Grid>
-                  </Grid>
-                </>
-              )}
-            </Grid>
+              </Box>
+            </>
           ) : (
-            <Grid container spacing={2}>
-              {/* First Name */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="First Name"
-                  value={owner.firstName || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'firstName', e.target.value)}
-                  error={formErrors && !owner.firstName}
-                  helperText={formErrors && !owner.firstName ? "First Name is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Last Name */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Last Name"
-                  value={owner.lastName || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'lastName', e.target.value)}
-                  error={formErrors && !owner.lastName}
-                  helperText={formErrors && !owner.lastName ? "Last Name is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Date of Birth */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  required
-                  type="date"
-                  label="Date of Birth"
-                  value={owner.dateOfBirth || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'dateOfBirth', e.target.value)}
-                  error={formErrors && !owner.dateOfBirth}
-                  helperText={formErrors && !owner.dateOfBirth ? "Date of Birth is required" : ""}
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-
-              {/* Gender */}
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.gender}>
-                  <InputLabel>Gender</InputLabel>
-                  <Select
-                    value={owner.gender || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'gender', e.target.value)}
-                    label="Gender"
-                  >
-                    <MenuItem value="male">Male</MenuItem>
-                    <MenuItem value="female">Female</MenuItem>
-                    <MenuItem value="other">Other</MenuItem>
-                  </Select>
-                  {formErrors && !owner.gender && (
-                    <FormHelperText>Gender is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Tobacco Status */}
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.tobaccoStatus}>
-                  <InputLabel>Tobacco Status</InputLabel>
-                  <Select
-                    value={owner.tobaccoStatus || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'tobaccoStatus', e.target.value)}
-                    label="Tobacco Status"
-                  >
-                    <MenuItem value="yes">Smoker</MenuItem>
-                    <MenuItem value="no">Non-Smoker</MenuItem>
-                  </Select>
-                  {formErrors && !owner.tobaccoStatus && (
-                    <FormHelperText>Tobacco Status is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.citizenship}>
-                  <InputLabel>Citizenship</InputLabel>
-                  <Select
-                    value={owner.citizenship || '01'}
-                    onChange={(e) => handleCitizenshipChange(owner.id, e.target.value)}
-                    label="Citizenship"
-                  >
-                    {dropdownValues.countries?.map((country) => (
-                      <MenuItem key={country.code} value={country.code}>
-                        {country.description}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors && !owner.citizenship && (
-                    <FormHelperText>Citizenship is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl
-                  fullWidth
-                  error={formErrors && !owner.state}
-                  size="small"
-                >
-                  <InputLabel>{owner.citizenship === '01' ? 'State' : 'Province'}</InputLabel>
-                  <Select
-                    value={owner.state || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
-                    label={owner.citizenship === '01' ? 'State' : 'Province'}
-                  >
-                    {owner.citizenship === '01'
-                      ? dropdownValues.states?.map((state) => (
-                        <MenuItem key={state.code} value={state.code}>
-                          {state.description}
-                        </MenuItem>
-                      ))
-                      : dropdownValues.provinces?.map((province) => (
-                        <MenuItem key={province.code} value={province.code}>
-                          {province.description}
-                        </MenuItem>
-                      ))
-                    }
-                  </Select>
-                  {formErrors && !owner.state && (
-                    <FormHelperText>
-                      {owner.citizenship === '01' ? 'State is required' : 'Province is required'}
-                    </FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={2}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="SSN"
-                  value={owner.ssn || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'ssn', e.target.value)}
-                  error={formErrors && !owner.ssn}
-                  helperText={formErrors && !owner.ssn ? "SSN is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Employer */}
-              <Grid item xs={12} md={2}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Employer"
-                  value={owner.employer || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'employer', e.target.value)}
-                  error={formErrors && !owner.employer}
-                  helperText={formErrors && !owner.employer ? "Employer is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Occupation */}
-              <Grid item xs={12} md={3}>
-                <FormControl fullWidth required size="small" error={formErrors && !owner.occupation}>
-                  <InputLabel>Occupation</InputLabel>
-                  <Select
-                    value={owner.occupation || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'occupation', e.target.value)}
-                    label="Occupation"
-                  >
-                    <MenuItem value="it">IT Consultant</MenuItem>
-                    <MenuItem value="lawyer">Lawyer</MenuItem>
-                    <MenuItem value="accountant">Accountant</MenuItem>
-                  </Select>
-                  {formErrors && !owner.occupation && (
-                    <FormHelperText>Occupation is required</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Net Worth */}
-              <Grid item xs={12} md={2}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Net Worth"
-                  value={owner.netWorth || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'netWorth', e.target.value)}
-                  error={formErrors && !owner.netWorth}
-                  helperText={formErrors && !owner.netWorth ? "Net Worth is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Annual Income */}
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Annual Income"
-                  value={owner.annualIncome || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'annualIncome', e.target.value)}
-                  error={formErrors && !owner.annualIncome}
-                  helperText={formErrors && !owner.annualIncome ? "Annual Income is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Primary Phone */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Primary Phone Number"
-                  value={owner.primaryPhone || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'primaryPhone', e.target.value)}
-                  error={formErrors && !owner.primaryPhone}
-                  helperText={formErrors && !owner.primaryPhone ? "Primary Phone is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Alternate Phone - Not Required */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  placeholder="Alternate Phone Number"
-                  value={owner.alternatePhone || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'alternatePhone', e.target.value)}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Email */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  required
-                  type="email"
-                  placeholder="Email Address"
-                  value={owner.email || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'email', e.target.value)}
-                  error={formErrors && !owner.email}
-                  helperText={formErrors && !owner.email ? "Email is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Address Line 1 */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="Address Line 1"
-                  value={owner.addressLine1 || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'addressLine1', e.target.value)}
-                  error={formErrors && !owner.addressLine1}
-                  helperText={formErrors && !owner.addressLine1 ? "Address Line 1 is required" : ""}
-                  size="small"
-                />
-              </Grid>
-
-              {/* Address Line 2 - Not Required */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  placeholder="Address Line 2"
-                  value={owner.addressLine2 || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'addressLine2', e.target.value)}
-                  size="small"
-                />
-              </Grid>
-
-              {/* City */}
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder="City"
-                  value={owner.city || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'city', e.target.value)}
-                  error={formErrors && !owner.city}
-                  helperText={formErrors && !owner.city ? "City is required" : ""}
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Country</InputLabel>
-                  <Select
-                    value={owner.addressCountry}
-                    onChange={(e) => handleAddressCountryChange(owner.id, e.target.value)}
-                    label="Country"
-                  >
-                    {dropdownValues.countries?.map((country) => (
-                      <MenuItem key={country.code} value={country.code}>
-                        {country.description}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <FormControl
-                  fullWidth
-                  error={formErrors && !owner.addressState}
-                  size="small"
-                >
-                  <InputLabel>{owner.addressCountry === '01' ? 'State' : 'Province'}</InputLabel>
-                  <Select
-                    value={owner.addressState || ''}
-                    onChange={(e) => handleFieldChange(owner.id, 'addressState', e.target.value)}
-                    label={owner.addressCountry === '01' ? 'State' : 'Province'}
-                  >
-                    {owner.addressCountry === '01'
-                      ? dropdownValues.states?.map((state) => (
-                        <MenuItem key={state.code} value={state.code}>
-                          {state.description}
-                        </MenuItem>
-                      ))
-                      : dropdownValues.provinces?.map((province) => (
-                        <MenuItem key={province.code} value={province.code}>
-                          {province.description}
-                        </MenuItem>
-                      ))
-                    }
-                  </Select>
-                  {formErrors && !owner.addressState && (
-                    <FormHelperText>
-                      {owner.addressCountry === '01' ? 'State is required' : 'Province is required'}
-                    </FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  required
-                  placeholder={owner.addressCountry === '01' ? 'Zip Code' : 'Postal Code'}
-                  value={owner.zipCode || ''}
-                  onChange={(e) => handleFieldChange(owner.id, 'zipCode', e.target.value)}
-                  error={formErrors && !owner.zipCode}
-                  helperText={formErrors && !owner.zipCode
-                    ? owner.addressCountry === '01'
-                      ? "Zip Code is required"
-                      : "Postal Code is required"
-                    : ""}
-                  size="small"
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={owner.sameAsMailingAddress}
-                      onChange={(e) => handleSameAsMailingAddressChange(owner.id, e.target.checked)}
-                    />
-                  }
-                  label="Same as Mailing Address"
-                />
-              </Grid>
-
-              {!owner.sameAsMailingAddress && (
-                <>
-                  <Typography variant="subtitle1" sx={{ mt: 3, mb: 2 }}>
-                    Mailing Address
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        required
-                        placeholder="Address Line 1"
-                        value={owner.mailingAddressLine1 || ''}
-                        onChange={(e) => handleFieldChange(owner.id, 'mailingAddressLine1', e.target.value)}
-                        error={formErrors && !owner.mailingAddressLine1}
-                        helperText={formErrors && !owner.mailingAddressLine1 ? "Address Line 1 is required" : ""}
-                        size="small"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        placeholder="Address Line 2"
-                        value={owner.mailingAddressLine2 || ''}
-                        onChange={(e) => handleFieldChange(owner.id, 'mailingAddressLine2', e.target.value)}
-                        size="small"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        required
-                        placeholder="City"
-                        value={owner.mailingCity || ''}
-                        onChange={(e) => handleFieldChange(owner.id, 'mailingCity', e.target.value)}
-                        error={formErrors && !owner.mailingCity}
-                        helperText={formErrors && !owner.mailingCity ? "City is required" : ""}
-                        size="small"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <FormControl fullWidth required size="small" error={formErrors && !owner.mailingAddressCountry}>
-                        <InputLabel>Country</InputLabel>
-                        <Select
-                          value={owner.mailingAddressCountry}
-                          onChange={(e) => handleAddressCountryChange(owner.id, e.target.value, true)}
-                          label="Country"
-                        >
-                          {dropdownValues.countries?.map((country) => (
-                            <MenuItem key={country.code} value={country.code}>
-                              {country.description}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        {formErrors && !owner.mailingAddressCountry && (
-                          <FormHelperText>Country is required</FormHelperText>
-                        )}
-                      </FormControl>
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <FormControl fullWidth required size="small" error={formErrors && !owner.mailingState}>
-                        <InputLabel>{owner.mailingAddressCountry === '01' ? 'State' : 'Province'}</InputLabel>
-                        <Select
-                          value={owner.mailingState || ''}
-                          onChange={(e) => handleFieldChange(owner.id, 'mailingState', e.target.value)}
-                          label={owner.mailingAddressCountry === '01' ? 'State' : 'Province'}
-                        >
-                          {owner.mailingAddressCountry === '01'
-                            ? dropdownValues.states?.map((state) => (
-                              <MenuItem key={state.code} value={state.code}>
-                                {state.description}
-                              </MenuItem>
-                            ))
-                            : dropdownValues.provinces?.map((province) => (
-                              <MenuItem key={province.code} value={province.code}>
-                                {province.description}
-                              </MenuItem>
-                            ))
-                          }
-                        </Select>
-                        {formErrors && !owner.mailingState && (
-                          <FormHelperText>
-                            {owner.mailingAddressCountry === '01' ? 'State is required' : 'Province is required'}
-                          </FormHelperText>
-                        )}
-                      </FormControl>
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        required
-                        placeholder={owner.mailingAddressCountry === '01' ? 'Zip Code' : 'Postal Code'}
-                        value={owner.mailingZipCode || ''}
-                        onChange={(e) => handleFieldChange(owner.id, 'mailingZipCode', e.target.value)}
-                        error={formErrors && !owner.mailingZipCode}
-                        helperText={formErrors && !owner.mailingZipCode
-                          ? owner.mailingAddressCountry === '01'
-                            ? "Zip Code is required"
-                            : "Postal Code is required"
-                          : ""}
-                        size="small"
-                      />
-                    </Grid>
-                  </Grid>
-                </>
-              )}
-            </Grid>
+            <Box sx={{ mb: 2 }}>
+              <CorporateInfo
+                owner={owner}
+                formErrors={formErrors}
+                dropdownValues={dropdownValues}
+                handleFieldChange={handleFieldChange}
+              />
+            </Box>
           )}
+
+          <Box sx={{ mb: 2 }}>
+            <AddressInfo
+              owner={owner}
+              formErrors={formErrors}
+              dropdownValues={dropdownValues}
+              handleFieldChange={handleFieldChange}
+              handleSameAsMailingAddressChange={handleSameAsMailingAddressChange}
+              mailingAddressRef={mailingAddressRef}
+            />
+          </Box>
         </Box>
+
       ))}
 
       <Box sx={{
