@@ -13,6 +13,9 @@ import {
   Grid,
   IconButton,
   Alert,
+  Stepper,
+  Step,
+  StepLabel,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import dashboardService from '../../api/dashboardService';
@@ -21,8 +24,9 @@ import OccupationInfo from '../../components/owner/OccupationInfo';
 import CorporateInfo from '../../components/owner/CorporateInfo';
 import AddressInfo from '../../components/owner/AddressInfo';
 import ContactInfo from '../../components/owner/ContactInfo';
+
 function Dashboard() {
-  const [tabValue, setTabValue] = React.useState(0);
+  const [activeStep, setActiveStep] = useState(0);
   const [owners, setOwners] = React.useState([
     {
       id: 1,
@@ -47,8 +51,22 @@ function Dashboard() {
   const [applicationNumber, setApplicationNumber] = useState('');
   const mailingAddressRef = useRef(null);
 
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
+  const steps = [
+    'Owner Details',
+    'Coverage Information',
+    'Medical & Lifestyle',
+    'Beneficiary Details',
+    'Payment & Banking',
+    'Review & Declaration',
+    'Submission & Confirmation'
+  ];
+
+  const handleNext = () => {
+    setActiveStep((prevStep) => prevStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevStep) => prevStep - 1);
   };
 
   const handleAddOwner = () => {
@@ -94,7 +112,6 @@ function Dashboard() {
   };
 
   const handleFieldChange = (ownerId, fieldName, value) => {
-    // Update the owner's field
     setOwners(owners.map(owner =>
       owner.id === ownerId
         ? { ...owner, [fieldName]: value }
@@ -140,7 +157,6 @@ function Dashboard() {
     const requiredFields = {
       ...commonFields,
       ...(owner.ownerType === '02' ? corporateFields : individualFields),
-      // Add mailing address fields if needed
       ...((!owner.sameAsMailingAddress) && {
         mailingAddressLine1: owner.mailingAddressLine1,
         mailingCity: owner.mailingCity,
@@ -159,7 +175,7 @@ function Dashboard() {
     return !hasEmptyFields;
   };
 
-  const handleSubmit = async () => {
+  const handleSaveAndContinue = async () => {
     const isValid = owners.every(owner => validateForm(owner));
 
     if (!isValid) {
@@ -193,7 +209,7 @@ function Dashboard() {
           stateCode: owner.state,
           addresses: [
             {
-              typeCode: "01", // Primary address
+              typeCode: "01", 
               addressLine1: owner.addressLine1,
               addressLine2: owner.addressLine2,
               city: owner.addressCity,
@@ -219,6 +235,7 @@ function Dashboard() {
 
       await dashboardService.saveOwners(ownerRequest);
       setFormErrors(false);
+      setActiveStep((prevStep) => prevStep + 1);
     } catch (error) {
       console.error('Error saving owners:', error);
     }
@@ -240,7 +257,7 @@ function Dashboard() {
 
   useEffect(() => {
     const generateApplicationNumber = () => {
-      const randomNum = Math.floor(100000 + Math.random() * 900000); // Generates 6-digit number
+      const randomNum = Math.floor(100000 + Math.random() * 900000); 
       return randomNum;
     };
 
@@ -249,175 +266,191 @@ function Dashboard() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box sx={{
-        mb: 4,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-      }}>
+      <Box sx={{ mb: 4 }}>
         <Typography
           variant="subtitle1"
           sx={{
             minWidth: 'fit-content',
-            color: 'text.secondary'
+            color: 'text.secondary',
+            mb: 3 
           }}
         >
           Application Number: APP{applicationNumber}
         </Typography>
 
-        <Divider
-          orientation="vertical"
-          flexItem
+        <Stepper
+          activeStep={activeStep}
+          alternativeLabel
           sx={{
-            mr: 2, // Add margin to the right
-            height: '20px',
-            alignSelf: 'center'
-          }}
-        />
-
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          sx={{
-            '& .MuiTab-root': {
+            '& .MuiStepLabel-label': {
               fontSize: '0.875rem',
-              minHeight: '48px',
+              mt: 1 
+            },
+            '& .MuiStepIcon-root': {
+              fontSize: '2rem',  
+            },
+            '& .MuiStepIcon-root.Mui-active': {
+              color: 'primary.main',  
+            },
+            '& .MuiStepIcon-root.Mui-completed': {
+              color: 'success.main',  
             }
           }}
         >
-          <Tab label="OWNER DETAILS" />
-          <Tab label="COVERAGE DETAILS" />
-          <Tab label="SUMMARY" />
-        </Tabs>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
       </Box>
 
-      {owners.map((owner, index) => (
-        <Box
-          key={owner.id}
-          ref={index === owners.length - 1 ? newOwnerRef : null}
-          sx={{
-            mb: 4,
-            p: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1,
-            position: 'relative'
-          }}
-        >
-          {!owner.isMainOwner && (
-            <IconButton
-              onClick={() => handleRemoveOwner(owner.id)}
+      {activeStep === 0 && (
+        <>
+          {owners.map((owner, index) => (
+            <Box
+              key={owner.id}
+              ref={index === owners.length - 1 ? newOwnerRef : null}
               sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                color: 'error.main',
+                mb: 4,
+                p: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                position: 'relative'
               }}
             >
-              <DeleteIcon />
-            </IconButton>
-          )}
+              {!owner.isMainOwner && (
+                <IconButton
+                  onClick={() => handleRemoveOwner(owner.id)}
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    color: 'error.main',
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              )}
 
-          <RadioGroup
-            row
-            value={owner.ownerType}
-            onChange={(e) => handleFieldChange(owner.id, 'ownerType', e.target.value)}
-            sx={{ mb: 3 }}
-          >
-            <FormControlLabel
-              value="01"
-              control={<Radio />}
-              label="Individual"
-            />
-            <FormControlLabel
-              value="02"
-              control={<Radio />}
-              label="Corporate"
-            />
-          </RadioGroup>
+              <RadioGroup
+                row
+                value={owner.ownerType}
+                onChange={(e) => handleFieldChange(owner.id, 'ownerType', e.target.value)}
+                sx={{ mb: 3 }}
+              >
+                <FormControlLabel
+                  value="01"
+                  control={<Radio />}
+                  label="Individual"
+                />
+                <FormControlLabel
+                  value="02"
+                  control={<Radio />}
+                  label="Corporate"
+                />
+              </RadioGroup>
 
-          {owner.ownerType === '01' ? (
-            <>
+              {owner.ownerType === '01' ? (
+                <>
+                  <Box sx={{ mb: 2 }}>
+                    <IndividualInfo
+                      owner={owner}
+                      formErrors={formErrors}
+                      dropdownValues={dropdownValues}
+                      handleFieldChange={handleFieldChange}
+                    />
+                  </Box>
+
+                  <Box sx={{ mb: 2 }}>
+                    <OccupationInfo
+                      owner={owner}
+                      formErrors={formErrors}
+                      handleFieldChange={handleFieldChange}
+                    />
+                  </Box>
+
+                  <Box sx={{ mb: 2 }}>
+                    <ContactInfo
+                      owner={owner}
+                      formErrors={formErrors}
+                      handleFieldChange={handleFieldChange}
+                    />
+                  </Box>
+                </>
+              ) : (
+                <Box sx={{ mb: 2 }}>
+                  <CorporateInfo
+                    owner={owner}
+                    formErrors={formErrors}
+                    dropdownValues={dropdownValues}
+                    handleFieldChange={handleFieldChange}
+                  />
+                </Box>
+              )}
+
               <Box sx={{ mb: 2 }}>
-                <IndividualInfo
+                <AddressInfo
                   owner={owner}
                   formErrors={formErrors}
                   dropdownValues={dropdownValues}
                   handleFieldChange={handleFieldChange}
+                  handleSameAsMailingAddressChange={handleSameAsMailingAddressChange}
+                  mailingAddressRef={mailingAddressRef}
                 />
               </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <OccupationInfo
-                  owner={owner}
-                  formErrors={formErrors}
-                  handleFieldChange={handleFieldChange}
-                />
-              </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <ContactInfo
-                  owner={owner}
-                  formErrors={formErrors}
-                  handleFieldChange={handleFieldChange}
-                />
-              </Box>
-            </>
-          ) : (
-            <Box sx={{ mb: 2 }}>
-              <CorporateInfo
-                owner={owner}
-                formErrors={formErrors}
-                dropdownValues={dropdownValues}
-                handleFieldChange={handleFieldChange}
-              />
             </Box>
-          )}
+          ))}
 
-          <Box sx={{ mb: 2 }}>
-            <AddressInfo
-              owner={owner}
-              formErrors={formErrors}
-              dropdownValues={dropdownValues}
-              handleFieldChange={handleFieldChange}
-              handleSameAsMailingAddressChange={handleSameAsMailingAddressChange}
-              mailingAddressRef={mailingAddressRef}
-            />
-          </Box>
-        </Box>
-
-      ))}
-
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: 2,
-        mt: 3,
-        '@media (max-width: 600px)': {
-          flexDirection: 'column',
-        }
-      }}>
-        <Button
-          variant="contained"
-          color="inherit"
-          onClick={handleAddOwner}
-          disabled={owners.length >= 2}
-          sx={{
-            bgcolor: 'grey.500',
-            '&:hover': {
-              bgcolor: 'grey.600',
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 2,
+            mt: 3,
+            '@media (max-width: 600px)': {
+              flexDirection: 'column',
             }
-          }}
-        >
-          ADD OWNER
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-        >
-          SAVE AND CONTINUE
-        </Button>
-      </Box>
+          }}>
+            <Button
+              variant="contained"
+              color="inherit"
+              onClick={handleAddOwner}
+              disabled={owners.length >= 2}
+              sx={{
+                bgcolor: 'grey.500',
+                '&:hover': {
+                  bgcolor: 'grey.600',
+                }
+              }}
+            >
+              ADD OWNER
+            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                color="inherit"
+                onClick={handleBack}
+                disabled={activeStep === 0}
+                sx={{
+                  bgcolor: 'grey.500',
+                  '&:hover': {
+                    bgcolor: 'grey.600',
+                  }
+                }}
+              >
+                Back
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleSaveAndContinue}
+              >
+                SAVE AND CONTINUE
+              </Button>
+            </Box>
+          </Box>
+        </>
+      )}
 
       {formErrors && (
         <Grid container justifyContent="center">
