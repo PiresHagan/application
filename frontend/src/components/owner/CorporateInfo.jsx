@@ -20,7 +20,6 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
   ];
   return (
     <Grid container spacing={2}>
-      {/* Company Name */}
       <Grid item xs={12}>
         <TextField
           fullWidth
@@ -29,13 +28,12 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
           value={owner.companyName || ''}
           onChange={(e) => handleFieldChange(owner.id, 'companyName', e.target.value)}
           error={formErrors && !owner.companyName}
-          size="small"
+          size="medium"
         />
       </Grid>
 
-      {/* Registered Country */}
       <Grid item xs={12} md={6}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.countryCode}>
+        <FormControl fullWidth required size="medium" error={formErrors && !owner.countryCode}>
           <InputLabel>Registered Country</InputLabel>
           <Select
             value={owner.countryCode || ''}
@@ -52,9 +50,8 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
         </FormControl>
       </Grid>
 
-      {/* Registered State/Province */}
       <Grid item xs={12} md={6}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.state}>
+        <FormControl fullWidth required size="medium" error={formErrors && !owner.state}>
           <InputLabel>{owner.countryCode === '01' ? 'Registered State' : 'Registered Province'}</InputLabel>
           <Select
             value={owner.state || ''}
@@ -79,7 +76,6 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
         </FormControl>
       </Grid>
 
-      {/* Business Registration */}
       <Grid item xs={12} md={6}>
         <TextField
           fullWidth
@@ -88,13 +84,12 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
           value={owner.businessRegistration || ''}
           onChange={(e) => handleFieldChange(owner.id, 'businessRegistration', e.target.value)}
           error={formErrors && !owner.businessRegistration}
-          size="small"
+          size="medium"
         />
       </Grid>
 
-      {/* Business Type */}
       <Grid item xs={12} md={6}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.businessType}>
+        <FormControl fullWidth required size="medium" error={formErrors && !owner.businessType}>
           <InputLabel>Business Type</InputLabel>
           <Select
             value={owner.businessType || ''}
@@ -110,9 +105,8 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
         </FormControl>
       </Grid>
 
-      {/* Relationship to Insured */}
       <Grid item xs={12}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.relationshipToInsured}>
+        <FormControl fullWidth required size="medium" error={formErrors && !owner.relationshipToInsured}>
           <InputLabel>Relationship to Insured</InputLabel>
           <Select
             value={owner.relationshipToInsured || ''}

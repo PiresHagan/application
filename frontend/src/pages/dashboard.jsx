@@ -18,12 +18,13 @@ import {
   StepLabel,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import dashboardService from '../../api/dashboardService';
-import IndividualInfo from '../../components/owner/IndividualInfo';
-import OccupationInfo from '../../components/owner/OccupationInfo';
-import CorporateInfo from '../../components/owner/CorporateInfo';
-import AddressInfo from '../../components/owner/AddressInfo';
-import ContactInfo from '../../components/owner/ContactInfo';
+import createService from '../api/createService';
+import IndividualInfo from '../components/owner/IndividualInfo';
+import OccupationInfo from '../components/owner/OccupationInfo';
+import CorporateInfo from '../components/owner/CorporateInfo';
+import AddressInfo from '../components/owner/AddressInfo';
+import ContactInfo from '../components/owner/ContactInfo';
+import CollapsibleSection from '../components/common/CollapsibleSection';
 
 function Dashboard() {
   const [activeStep, setActiveStep] = useState(0);
@@ -50,6 +51,13 @@ function Dashboard() {
   });
   const [applicationNumber, setApplicationNumber] = useState('');
   const mailingAddressRef = useRef(null);
+  const [expandedSection, setExpandedSection] = useState('ownerDetails');
+  const [sectionValidation, setSectionValidation] = useState({
+    ownerDetails: false,
+    occupation: false,
+    contact: false,
+    address: false
+  });
 
   const steps = [
     'Owner Details',
@@ -111,72 +119,76 @@ function Dashboard() {
     }
   };
 
-  const handleFieldChange = (ownerId, fieldName, value) => {
-    setOwners(owners.map(owner =>
-      owner.id === ownerId
-        ? { ...owner, [fieldName]: value }
-        : owner
-    ));
+  const validateOwnerDetails = (owner) => {
+    const fields = owner.ownerType === '01' ? [
+      'firstName',
+      'lastName',
+      'dateOfBirth',
+      'gender',
+      'tobacco',
+      'countryCode',
+      'state',
+      'ssn'
+    ] : ['companyName', 'businessRegistration', 'businessType', 'relationshipToInsured', 'countryCode', 'state'];
+    return fields.every(field => owner[field] && owner[field].toString().trim() !== '');
   };
 
-  const validateForm = (owner) => {
-    const commonFields = {
-      addressLine1: owner.addressLine1,
-      addressCity: owner.addressCity,
-      addressCountry: owner.addressCountry,
-      addressState: owner.addressState,
-      addressZipCode: owner.addressZipCode,
-      countryCode: owner.countryCode,
-      state: owner.state,
-    };
+  const validateOccupation = (owner) => {
+    const fields = ['employer', 'occupation', 'netWorth', 'annualIncome'];
+    return fields.every(field => owner[field] && owner[field].toString().trim() !== '');
+  };
 
-    const corporateFields = {
-      companyName: owner.companyName,
-      businessRegistration: owner.businessRegistration,
-      businessType: owner.businessType,
-      relationshipToInsured: owner.relationshipToInsured
-    };
+  const validateContact = (owner) => {
+    const fields = ['primaryPhone', 'email'];
+    return fields.every(field => owner[field] && owner[field].toString().trim() !== '');
+  };
 
-    const individualFields = {
-      firstName: owner.firstName,
-      lastName: owner.lastName,
-      dateOfBirth: owner.dateOfBirth,
-      gender: owner.gender,
-      tobacco: owner.tobacco,
-      ssn: owner.ssn,
-      employer: owner.employer,
-      occupation: owner.occupation,
-      netWorth: owner.netWorth,
-      annualIncome: owner.annualIncome,
-      primaryPhone: owner.primaryPhone,
-      alternatePhone: owner.alternatePhone,
-      email: owner.email,
-    };
+  const validateAddress = (owner) => {
+    const fields = [
+      'addressLine1',
+      'addressCity',
+      'addressState',
+      'addressZipCode',
+      ...(owner.sameAsMailingAddress ? [] : [
+        'mailingAddressLine1',
+        'mailingCity',
+        'mailingState',
+        'mailingZipCode'
+      ])
+    ];
+    return fields.every(field => owner[field] && owner[field].toString().trim() !== '');
+  };
 
+  const handleSectionChange = (section) => (event, isExpanded) => {
+    setExpandedSection(isExpanded ? section : false);
+  };
 
-    const requiredFields = {
-      ...commonFields,
-      ...(owner.ownerType === '02' ? corporateFields : individualFields),
-      ...((!owner.sameAsMailingAddress) && {
-        mailingAddressLine1: owner.mailingAddressLine1,
-        mailingCity: owner.mailingCity,
-        mailingAddressCountry: owner.mailingAddressCountry,
-        mailingState: owner.mailingState,
-        mailingZipCode: owner.mailingZipCode
-      })
-    };
-    console.log(requiredFields);
+  const handleFieldChange = (ownerId, fieldName, value) => {
+    setOwners(owners.map(owner => {
+      if (owner.id === ownerId) {
+        const updatedOwner = { ...owner, [fieldName]: value };
 
-    // Check if any required field is empty
-    const hasEmptyFields = Object.entries(requiredFields).some(
-      ([key, value]) => !value || value.toString().trim() === ''
-    );
+        // Validate sections after field change
+        const newValidation = {
+          ownerDetails: validateOwnerDetails(updatedOwner),
+          occupation: validateOccupation(updatedOwner),
+          contact: validateContact(updatedOwner),
+          address: validateAddress(updatedOwner)
+        };
 
-    return !hasEmptyFields;
+        setSectionValidation(prev => ({
+          ...prev,
+          [ownerId]: newValidation
+        }));
+
+        return updatedOwner;
+      }
+      return owner;
+    }));
   };
 
   const handleSaveAndContinue = async () => {
-    const isValid = owners.every(owner => validateForm(owner));
+    const isValid = owners.every(owner => validateOwnerDetails(owner) && validateOccupation(owner) && validateContact(owner) && validateAddress(owner));
 
     if (!isValid) {
       setFormErrors(true);
@@ -209,7 +221,7 @@ function Dashboard() {
           stateCode: owner.state,
           addresses: [
             {
-              typeCode: "01", 
+              typeCode: "01",
               addressLine1: owner.addressLine1,
               addressLine2: owner.addressLine2,
               city: owner.addressCity,
@@ -233,7 +245,7 @@ function Dashboard() {
 
       console.log(ownerRequest);
 
-      await dashboardService.saveOwners(ownerRequest);
+      await createService.saveOwners(ownerRequest);
       setFormErrors(false);
       setActiveStep((prevStep) => prevStep + 1);
     } catch (error) {
@@ -244,7 +256,7 @@ function Dashboard() {
   useEffect(() => {
     const fetchDropdownValues = async () => {
       try {
-        const response = await dashboardService.getDropdownValues();
+        const response = await createService.getDropdownValues();
         console.log('Dropdown response:', response.data);
         setDropdownValues(response.data);
       } catch (error) {
@@ -257,7 +269,7 @@ function Dashboard() {
 
   useEffect(() => {
     const generateApplicationNumber = () => {
-      const randomNum = Math.floor(100000 + Math.random() * 900000); 
+      const randomNum = Math.floor(100000 + Math.random() * 900000);
       return randomNum;
     };
 
@@ -272,7 +284,7 @@ function Dashboard() {
           sx={{
             minWidth: 'fit-content',
             color: 'text.secondary',
-            mb: 3 
+            mb: 3
           }}
         >
           Application Number: APP{applicationNumber}
@@ -284,16 +296,16 @@ function Dashboard() {
           sx={{
             '& .MuiStepLabel-label': {
               fontSize: '0.875rem',
-              mt: 1 
+              mt: 1
             },
             '& .MuiStepIcon-root': {
-              fontSize: '2rem',  
+              fontSize: '2rem',
             },
             '& .MuiStepIcon-root.Mui-active': {
-              color: 'primary.main',  
+              color: 'primary.main',
             },
             '& .MuiStepIcon-root.Mui-completed': {
-              color: 'success.main',  
+              color: 'success.main',
             }
           }}
         >
@@ -334,63 +346,109 @@ function Dashboard() {
                 </IconButton>
               )}
 
-              <RadioGroup
-                row
-                value={owner.ownerType}
-                onChange={(e) => handleFieldChange(owner.id, 'ownerType', e.target.value)}
-                sx={{ mb: 3 }}
-              >
-                <FormControlLabel
-                  value="01"
-                  control={<Radio />}
-                  label="Individual"
-                />
-                <FormControlLabel
-                  value="02"
-                  control={<Radio />}
-                  label="Corporate"
-                />
-              </RadioGroup>
-
               {owner.ownerType === '01' ? (
                 <>
-                  <Box sx={{ mb: 2 }}>
+                  <CollapsibleSection
+                    title="Owner Details"
+                    isEnabled={true}
+                    isExpanded={expandedSection === 'ownerDetails'}
+                    isValid={sectionValidation[owner.id]?.ownerDetails}
+                    onExpand={handleSectionChange('ownerDetails')}
+                  >
+                    <RadioGroup
+                      row
+                      value={owner.ownerType}
+                      onChange={(e) => handleFieldChange(owner.id, 'ownerType', e.target.value)}
+                      sx={{ mb: 3 }}
+                    >
+                      <FormControlLabel
+                        value="01"
+                        control={<Radio />}
+                        label="Individual"
+                      />
+                      <FormControlLabel
+                        value="02"
+                        control={<Radio />}
+                        label="Corporate"
+                      />
+                    </RadioGroup>
                     <IndividualInfo
                       owner={owner}
                       formErrors={formErrors}
                       dropdownValues={dropdownValues}
                       handleFieldChange={handleFieldChange}
                     />
-                  </Box>
+                  </CollapsibleSection>
 
-                  <Box sx={{ mb: 2 }}>
+                  <CollapsibleSection
+                    title="Occupation"
+                    isEnabled={sectionValidation[owner.id]?.ownerDetails}
+                    isExpanded={expandedSection === 'occupation'}
+                    isValid={sectionValidation[owner.id]?.occupation}
+                    onExpand={handleSectionChange('occupation')}
+                  >
                     <OccupationInfo
                       owner={owner}
                       formErrors={formErrors}
                       handleFieldChange={handleFieldChange}
                     />
-                  </Box>
-
-                  <Box sx={{ mb: 2 }}>
-                    <ContactInfo
-                      owner={owner}
-                      formErrors={formErrors}
-                      handleFieldChange={handleFieldChange}
-                    />
-                  </Box>
+                  </CollapsibleSection>
                 </>
               ) : (
-                <Box sx={{ mb: 2 }}>
+                <CollapsibleSection
+                  title="Owner Details"
+                  isEnabled={true}
+                  isExpanded={expandedSection === 'ownerDetails'}
+                  isValid={sectionValidation[owner.id]?.ownerDetails}
+                  onExpand={handleSectionChange('ownerDetails')}
+                >
+                  <RadioGroup
+                    row
+                    value={owner.ownerType}
+                    onChange={(e) => handleFieldChange(owner.id, 'ownerType', e.target.value)}
+                    sx={{ mb: 3 }}
+                  >
+                    <FormControlLabel
+                      value="01"
+                      control={<Radio />}
+                      label="Individual"
+                    />
+                    <FormControlLabel
+                      value="02"
+                      control={<Radio />}
+                      label="Corporate"
+                    />
+                  </RadioGroup>
                   <CorporateInfo
                     owner={owner}
                     formErrors={formErrors}
                     dropdownValues={dropdownValues}
                     handleFieldChange={handleFieldChange}
                   />
-                </Box>
+                </CollapsibleSection>
               )}
 
-              <Box sx={{ mb: 2 }}>
+              <CollapsibleSection
+                title="Contact Information"
+                isEnabled={owner.ownerType === '01' ? sectionValidation[owner.id]?.occupation : sectionValidation[owner.id]?.ownerDetails}
+                isExpanded={expandedSection === 'contact'}
+                isValid={sectionValidation[owner.id]?.contact}
+                onExpand={handleSectionChange('contact')}
+              >
+                <ContactInfo
+                  owner={owner}
+                  formErrors={formErrors}
+                  handleFieldChange={handleFieldChange}
+                />
+              </CollapsibleSection>
+
+              <CollapsibleSection
+                title="Address Details"
+                isEnabled={sectionValidation[owner.id]?.contact}
+                isExpanded={expandedSection === 'address'}
+                isValid={sectionValidation[owner.id]?.address}
+                onExpand={handleSectionChange('address')}
+              >
                 <AddressInfo
                   owner={owner}
                   formErrors={formErrors}
@@ -399,7 +457,7 @@ function Dashboard() {
                   handleSameAsMailingAddressChange={handleSameAsMailingAddressChange}
                   mailingAddressRef={mailingAddressRef}
                 />
-              </Box>
+              </CollapsibleSection>
             </Box>
           ))}
 
@@ -445,7 +503,7 @@ function Dashboard() {
                 variant="contained"
                 onClick={handleSaveAndContinue}
               >
-                SAVE AND CONTINUE
+                Next Step
               </Button>
             </Box>
           </Box>

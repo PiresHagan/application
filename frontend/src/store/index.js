@@ -1,42 +1,30 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import {
-  persistStore,
-  persistReducer,
-  FLUSH,
-  REHYDRATE,
-  PAUSE,
-  PERSIST,
-  PURGE,
-  REGISTER,
-} from 'redux-persist';
-
-/* local Storage */
+import { configureStore } from '@reduxjs/toolkit';
+import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
-/* session Storage */
-// import storage from 'redux-persist/lib/storage/session';
-
-import counterReducer from '../features/counter/counterSlice';
+import { apiSlice } from '../slices/apiSlice';
+import authReducer from '../slices/authSlice';
 
 const persistConfig = {
   key: 'root',
-  version: 1,
   storage,
+  whitelist: ['auth'],
+  blacklist: [apiSlice.reducerPath],
 };
 
-const rootReducer = combineReducers({
-  counter: counterReducer
-});
-
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+const persistedReducer = persistReducer(persistConfig, authReducer);
 
 const store = configureStore({
-  reducer: persistedReducer,
+  reducer: {
+    [apiSlice.reducerPath]: apiSlice.reducer,
+    auth: persistedReducer,
+  },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
-    }),
+    }).concat(apiSlice.middleware),
+  devTools: process.env.NODE_ENV !== 'production',
 });
 
 export const persistor = persistStore(store);

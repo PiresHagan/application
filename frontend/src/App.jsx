@@ -1,19 +1,19 @@
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 
-import Layout from "./layouts/layout"
 import Counter from './pages/counter/counter';
-import Dashboard from './pages/dashboard/dashboard';
-
+import Create from './pages/create';
+import Register from './pages/Auth/Register';
+import Login from './pages/Auth/login';
 function App() {
 
   return (
-    <Layout>
       <Routes>
-        <Route path='/' exact element={<Dashboard />} />
         <Route path='/counter' exact element={<Counter />} />
+        <Route path='/create' exact element={<Create />} />
+        <Route path='/register' exact element={<Register />} />
+        <Route path='/login' exact element={<Login />} />
       </Routes>
-    </Layout>
   );
 }
 

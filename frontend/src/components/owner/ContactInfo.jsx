@@ -13,18 +13,17 @@ const ContactInfo = ({ owner, formErrors, handleFieldChange }) => {
           value={owner.primaryPhone || ''}
           onChange={(e) => handleFieldChange(owner.id, 'primaryPhone', e.target.value)}
           error={formErrors && !owner.primaryPhone}
-          size="small"
+          size="medium"
         />
       </Grid>
 
-      {/* Alternate Phone - Not Required */}
       <Grid item xs={12} md={4}>
         <TextField
           fullWidth
           placeholder="Alternate Phone Number"
           value={owner.alternatePhone || ''}
           onChange={(e) => handleFieldChange(owner.id, 'alternatePhone', e.target.value)}
-          size="small"
+          size="medium"
         />
       </Grid>
 
@@ -38,7 +37,7 @@ const ContactInfo = ({ owner, formErrors, handleFieldChange }) => {
           value={owner.email || ''}
           onChange={(e) => handleFieldChange(owner.id, 'email', e.target.value)}
           error={formErrors && !owner.email}
-          size="small"
+          size="medium"
         />
       </Grid>
     </Grid>

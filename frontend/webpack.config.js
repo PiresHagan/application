@@ -24,10 +24,15 @@ module.exports = (env, options) => {
     },
 
     devServer: {
-      port: process.env.REACT_APP_PORT,
-      static: path.resolve(__dirname, 'dist'),
-      historyApiFallback: true,
       hot: true,
+      historyApiFallback: true,
+      port: process.env.REACT_APP_PORT,
+      static: {
+        directory: path.join(__dirname, 'dist'),
+      },
+      client: {
+        overlay: true,
+      },
     },
 
     output: {

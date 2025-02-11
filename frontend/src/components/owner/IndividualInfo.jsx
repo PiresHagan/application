@@ -16,7 +16,7 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           value={owner.firstName || ''}
           onChange={(e) => handleFieldChange(owner.id, 'firstName', e.target.value)}
           error={formErrors && !owner.firstName}
-          size="small"
+          size="medium"
         />
       </Grid>
 
@@ -29,7 +29,7 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           value={owner.lastName || ''}
           onChange={(e) => handleFieldChange(owner.id, 'lastName', e.target.value)}
           error={formErrors && !owner.lastName}
-          size="small"
+          size="medium"
         />
       </Grid>
 
@@ -43,14 +43,14 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           value={owner.dateOfBirth || ''}
           onChange={(e) => handleFieldChange(owner.id, 'dateOfBirth', e.target.value)}
           error={formErrors && !owner.dateOfBirth}
-          size="small"
+          size="medium"
           InputLabelProps={{ shrink: true }}
         />
       </Grid>
 
       {/* Gender */}
       <Grid item xs={12} md={4}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.gender}>
+        <FormControl fullWidth required size="medium" error={formErrors && !owner.gender}>
           <InputLabel>Gender</InputLabel>
           <Select
             value={owner.gender || ''}
@@ -66,7 +66,7 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
 
       {/* Tobacco Status */}
       <Grid item xs={12} md={4}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.tobacco}>
+        <FormControl fullWidth required size="medium" error={formErrors && !owner.tobacco}>
           <InputLabel>Tobacco Status</InputLabel>
           <Select
             value={owner.tobacco || ''}
@@ -80,7 +80,7 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
       </Grid>
 
       <Grid item xs={12} md={4}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.countryCode}>
+        <FormControl fullWidth required size="medium" error={formErrors && !owner.countryCode}>
           <InputLabel>Citizenship</InputLabel>
           <Select
             value={owner.countryCode || '01'}
@@ -100,7 +100,7 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
         <FormControl
           fullWidth
           error={formErrors && !owner.state}
-          size="small"
+          size="medium"
         >
           <InputLabel>{owner.countryCode === '01' ? 'State' : 'Province'}</InputLabel>
           <Select
@@ -133,7 +133,7 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           value={owner.ssn || ''}
           onChange={(e) => handleFieldChange(owner.id, 'ssn', e.target.value)}
           error={formErrors && !owner.ssn}
-          size="small"
+          size="medium"
         />
       </Grid>
     </Grid>

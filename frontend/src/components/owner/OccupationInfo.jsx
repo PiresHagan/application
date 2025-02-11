@@ -13,13 +13,13 @@ const OccupationInfo = ({ owner, formErrors, handleFieldChange }) => {
           value={owner.employer || ''}
           onChange={(e) => handleFieldChange(owner.id, 'employer', e.target.value)}
           error={formErrors && !owner.employer}
-          size="small"
+          size="medium"
         />
       </Grid>
 
       {/* Occupation */}
       <Grid item xs={12} md={3}>
-        <FormControl fullWidth required size="small" error={formErrors && !owner.occupation}>
+        <FormControl fullWidth required size="medium" error={formErrors && !owner.occupation}>
           <InputLabel>Occupation</InputLabel>
           <Select
             value={owner.occupation || ''}
@@ -42,7 +42,7 @@ const OccupationInfo = ({ owner, formErrors, handleFieldChange }) => {
           value={owner.netWorth || ''}
           onChange={(e) => handleFieldChange(owner.id, 'netWorth', e.target.value)}
           error={formErrors && !owner.netWorth}
-          size="small"
+          size="medium"
         />
       </Grid>
 
@@ -55,7 +55,7 @@ const OccupationInfo = ({ owner, formErrors, handleFieldChange }) => {
           value={owner.annualIncome || ''}
           onChange={(e) => handleFieldChange(owner.id, 'annualIncome', e.target.value)}
           error={formErrors && !owner.annualIncome}
-          size="small"
+          size="medium"
         />
       </Grid>
     </Grid>
