@@ -8,11 +8,9 @@ import {
   Radio,
   Button,
   Grid,
-  Alert,
   Stepper,
   Step,
   StepLabel,
-  TextField,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { toast } from 'react-toastify';
@@ -25,9 +23,8 @@ import ContactInfo from '../components/owner/ContactInfo';
 import CollapsibleSection from '../components/common/CollapsibleSection';
 import CreateLayout from '../layouts/CreateLayout';
 import Loader from '../components/common/Loader';
-import { validateSection, validateOwnerDetails, validateOccupation, validateContact, validateAddress, validateField } from '../utils/validations';
+import { validateSection, validateField } from '../utils/validations';
 
-// Constants for better maintainability
 const INITIAL_OWNER = {
   id: 1,
   isMainOwner: true,
@@ -41,6 +38,15 @@ const INITIAL_OWNER = {
 const SECTION_ORDER = {
   '01': ['ownerDetails', 'occupation', 'contact', 'address'],
   '02': ['ownerDetails', 'contact', 'address']
+};
+
+const getPreviousSection = (currentSection, ownerType) => {
+  const sectionsOrder = ownerType === '02'
+    ? ['ownerDetails', 'contact', 'address']
+    : ['ownerDetails', 'occupation', 'contact', 'address'];
+
+  const currentIndex = sectionsOrder.indexOf(currentSection);
+  return currentIndex > 0 ? sectionsOrder[currentIndex - 1] : null;
 };
 
 function Create() {
@@ -64,7 +70,6 @@ function Create() {
   });
   const [sectionValidation, setSectionValidation] = useState({});
   const [attemptedSections, setAttemptedSections] = useState({});
-  const [currentOwnerId, setCurrentOwnerId] = useState(1);
 
   const steps = [
     'Owner Details',
@@ -76,56 +81,49 @@ function Create() {
     'Submission & Confirmation'
   ];
 
-  const handleNext = () => {
-    setActiveStep((prevStep) => prevStep + 1);
-  };
-
   const handleBack = () => {
     setActiveStep((prevStep) => prevStep - 1);
   };
-
-  const getSectionOrder = useCallback((ownerType) => {
-    return SECTION_ORDER[ownerType] || SECTION_ORDER['01'];
-  }, []);
 
   const validateOwnerSection = useCallback((owner, section) => {
     const { isValid } = validateSection(owner, section, owner.countryCode);
     return isValid;
   }, []);
 
-  const handleSectionChange = (ownerId, section) => (event, isExpanded) => {
-    if (!isExpanded) return;
+  const handleSectionChange = (ownerId, sectionName) => () => {
+    if (expandedSections[ownerId] === sectionName || expandedSections[`${ownerId}-${sectionName}`]) {
+      setExpandedSections(prev => ({
+        ...prev,
+        [ownerId]: null,
+        [`${ownerId}-${sectionName}`]: null
+      }));
+      return;
+    }
+
+    const owner = owners.find(o => o.id === ownerId);
+    const previousSection = getPreviousSection(sectionName, owner.ownerType);
+
+    if (previousSection) {
+      const { isValid } = validateSection(owner, previousSection, owner.countryCode);
+      if (!isValid) {
+        setFormErrors(true);
+        return;
+      }
+    }
+
     setFormErrors(false);
-
-    const currentOwner = owners.find(owner => owner.id === ownerId);
-    const sectionsOrder = currentOwner.ownerType === '02'
-      ? ['ownerDetails', 'contact', 'address']
-      : ['ownerDetails', 'occupation', 'contact', 'address'];
-
-    const currentIndex = sectionsOrder.indexOf(section);
-    const previousSections = sectionsOrder.slice(0, currentIndex);
-
-    // Check if previous sections are valid
-    const canExpand = previousSections.every(
-      prevSection => sectionValidation[ownerId]?.[prevSection]
-    );
-
-    if (!canExpand) return;
-
-    // Update expanded sections while keeping previous sections expanded
     setExpandedSections(prev => ({
       ...prev,
-      [ownerId]: section,
-      [`${ownerId}-${section}`]: true
+      [ownerId]: sectionName,
+      [`${ownerId}-${sectionName}`]: true
     }));
 
-    // Scroll to the selected section
     setTimeout(() => {
-      const sectionElement = document.getElementById(`section-${ownerId}-${section}`);
-      if (sectionElement) {
-        sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
+        const sectionElement = document.getElementById(`section-${ownerId}-${sectionName}`);
+        if (sectionElement) {
+          sectionElement.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, 200);
   };
 
   const handleDisabledSectionClick = (ownerId, section) => {
@@ -137,7 +135,6 @@ function Create() {
     const currentIndex = sectionsOrder.indexOf(section);
     const previousSections = sectionsOrder.slice(0, currentIndex);
 
-    // Mark all previous sections and current section as attempted
     setAttemptedSections(prev => ({
       ...prev,
       [ownerId]: {
@@ -147,10 +144,8 @@ function Create() {
       }
     }));
 
-    // Force error display
     setFormErrors(true);
 
-    // Validate and update section validation state
     const newValidation = {};
     previousSections.forEach(sec => {
       const { isValid } = validateSection(currentOwner, sec, currentOwner.countryCode);
@@ -247,7 +242,6 @@ function Create() {
       if (owner.id === ownerId) {
         const updatedOwner = { ...owner, [fieldName]: value };
 
-        // Update validation state
         const newValidation = {
           ownerDetails: validateOwnerSection(updatedOwner, 'ownerDetails'),
           occupation: updatedOwner.ownerType === '02' ? true : validateOwnerSection(updatedOwner, 'occupation'),
@@ -267,7 +261,6 @@ function Create() {
   }, [validateOwnerSection]);
 
   const handleSaveAndContinue = async () => {
-    // Mark all sections as attempted to show validation errors
     setFormErrors(true);
 
     owners.forEach(owner => {
@@ -275,7 +268,6 @@ function Create() {
         ? ['ownerDetails', 'contact', 'address']
         : ['ownerDetails', 'occupation', 'contact', 'address'];
 
-      // Mark all sections as attempted
       setAttemptedSections(prev => ({
         ...prev,
         [owner.id]: {
@@ -287,7 +279,6 @@ function Create() {
         }
       }));
 
-      // Update section validation state
       const newValidation = {};
       sectionsToValidate.forEach(section => {
         const { isValid } = validateSection(owner, section, owner.countryCode);
@@ -303,7 +294,6 @@ function Create() {
       }));
     });
 
-    // Validate all sections for all owners
     const isValid = owners.every(owner => {
       const sectionsToValidate = owner.ownerType === '02'
         ? ['ownerDetails', 'contact', 'address']
@@ -401,7 +391,7 @@ function Create() {
       ) : (
         <Box>
           <Container
-            maxWidth="xl"
+            maxWidth="false"
             sx={{
               py: 3,
               pl: { xs: 3, sm: 8 }
