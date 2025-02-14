@@ -7,12 +7,12 @@ const AddressInfo = ({
   dropdownValues,
   handleFieldChange,
   handleSameAsMailingAddressChange,
-  mailingAddressRef
+  mailingAddressRef,
+  shouldShowError,
+  getErrorMessage
 }) => {
   return (
     <Grid container spacing={2}>
-
-
       {/* Address Line 1 */}
       <Grid item xs={12} md={6}>
         <TextField
@@ -21,7 +21,8 @@ const AddressInfo = ({
           placeholder="Address Line 1"
           value={owner.addressLine1 || ''}
           onChange={(e) => handleFieldChange(owner.id, 'addressLine1', e.target.value)}
-          error={formErrors && !owner.addressLine1}
+          error={shouldShowError(owner.id, 'address', 'addressLine1')}
+          helperText={getErrorMessage(owner.id, 'address', 'addressLine1')}
           size="medium"
         />
       </Grid>
@@ -45,20 +46,25 @@ const AddressInfo = ({
           placeholder="City"
           value={owner.addressCity || ''}
           onChange={(e) => handleFieldChange(owner.id, 'addressCity', e.target.value)}
-          error={formErrors && !owner.addressCity}
+          error={shouldShowError(owner.id, 'address', 'addressCity')}
+          helperText={getErrorMessage(owner.id, 'address', 'addressCity')}
           size="medium"
-
         />
       </Grid>
+
+      {/* Country */}
       <Grid item xs={12} md={3}>
-        <FormControl fullWidth size="medium">
+        <FormControl
+          fullWidth
+          size="medium"
+          error={shouldShowError(owner.id, 'address', 'addressCountry')}
+        >
           <InputLabel>Country</InputLabel>
           <Select
             value={owner.addressCountry}
             onChange={(e) => handleFieldChange(owner.id, 'addressCountry', e.target.value)}
             label="Country"
           >
-
             {dropdownValues.countries?.map((country) => (
               <MenuItem key={country.code} value={country.code}>
                 {country.description}
@@ -67,10 +73,12 @@ const AddressInfo = ({
           </Select>
         </FormControl>
       </Grid>
+
+      {/* State/Province */}
       <Grid item xs={12} md={3}>
         <FormControl
           fullWidth
-          error={formErrors && !owner.addressState}
+          error={shouldShowError(owner.id, 'address', 'addressState')}
           size="medium"
         >
           <InputLabel>{owner.addressCountry === '01' ? 'State' : 'Province'}</InputLabel>
@@ -94,6 +102,8 @@ const AddressInfo = ({
           </Select>
         </FormControl>
       </Grid>
+
+      {/* ZIP/Postal Code */}
       <Grid item xs={12} md={3}>
         <TextField
           fullWidth
@@ -101,12 +111,13 @@ const AddressInfo = ({
           placeholder={owner.addressCountry === '01' ? 'Zip Code' : 'Postal Code'}
           value={owner.addressZipCode || ''}
           onChange={(e) => handleFieldChange(owner.id, 'addressZipCode', e.target.value)}
-          error={formErrors && !owner.addressZipCode}
+          error={shouldShowError(owner.id, 'address', 'addressZipCode')}
+          helperText={getErrorMessage(owner.id, 'address', 'addressZipCode')}
           size="medium"
-
         />
       </Grid>
 
+      {/* Same as Mailing Address Checkbox */}
       <Grid item xs={12}>
         <FormControlLabel
           control={
@@ -119,12 +130,13 @@ const AddressInfo = ({
         />
       </Grid>
 
+      {/* Mailing Address Section */}
       {!owner.sameAsMailingAddress && (
         <>
           <Typography
             ref={mailingAddressRef}
             variant="subtitle1"
-            sx={{ m:2 }}
+            sx={{ m: 2 }}
           >
             Mailing Address
           </Typography>
@@ -132,19 +144,21 @@ const AddressInfo = ({
             maxWidth: '100%',
             margin: '0 auto'
           }}>
+            {/* Mailing Address Line 1 */}
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 required
                 placeholder="Address Line 1"
                 value={owner.mailingAddressLine1 || ''}
-
                 onChange={(e) => handleFieldChange(owner.id, 'mailingAddressLine1', e.target.value)}
-                error={formErrors && !owner.mailingAddressLine1}
+                error={shouldShowError(owner.id, 'address', 'mailingAddressLine1')}
+                helperText={getErrorMessage(owner.id, 'address', 'mailingAddressLine1')}
                 size="medium"
               />
             </Grid>
 
+            {/* Mailing Address Line 2 */}
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -155,6 +169,7 @@ const AddressInfo = ({
               />
             </Grid>
 
+            {/* Mailing City */}
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
@@ -162,20 +177,26 @@ const AddressInfo = ({
                 placeholder="City"
                 value={owner.mailingCity || ''}
                 onChange={(e) => handleFieldChange(owner.id, 'mailingCity', e.target.value)}
-                error={formErrors && !owner.mailingCity}
+                error={shouldShowError(owner.id, 'address', 'mailingCity')}
+                helperText={getErrorMessage(owner.id, 'address', 'mailingCity')}
                 size="medium"
               />
             </Grid>
 
+            {/* Mailing Country */}
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth required size="medium" error={formErrors && !owner.mailingAddressCountry}>
+              <FormControl
+                fullWidth
+                required
+                size="medium"
+                error={shouldShowError(owner.id, 'address', 'mailingAddressCountry')}
+              >
                 <InputLabel>Country</InputLabel>
                 <Select
                   value={owner.mailingAddressCountry}
                   onChange={(e) => handleFieldChange(owner.id, 'mailingAddressCountry', e.target.value)}
                   label="Country"
                 >
-
                   {dropdownValues.countries?.map((country) => (
                     <MenuItem key={country.code} value={country.code}>
                       {country.description}
@@ -185,8 +206,14 @@ const AddressInfo = ({
               </FormControl>
             </Grid>
 
+            {/* Mailing State/Province */}
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth required size="medium" error={formErrors && !owner.mailingState}>
+              <FormControl
+                fullWidth
+                required
+                size="medium"
+                error={shouldShowError(owner.id, 'address', 'mailingState')}
+              >
                 <InputLabel>{owner.mailingAddressCountry === '01' ? 'State' : 'Province'}</InputLabel>
                 <Select
                   value={owner.mailingState || ''}
@@ -209,6 +236,7 @@ const AddressInfo = ({
               </FormControl>
             </Grid>
 
+            {/* Mailing ZIP/Postal Code */}
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
@@ -216,7 +244,8 @@ const AddressInfo = ({
                 placeholder={owner.mailingAddressCountry === '01' ? 'Zip Code' : 'Postal Code'}
                 value={owner.mailingZipCode || ''}
                 onChange={(e) => handleFieldChange(owner.id, 'mailingZipCode', e.target.value)}
-                error={formErrors && !owner.mailingZipCode}
+                error={shouldShowError(owner.id, 'address', 'mailingZipCode')}
+                helperText={getErrorMessage(owner.id, 'address', 'mailingZipCode')}
                 size="medium"
               />
             </Grid>

@@ -31,7 +31,7 @@ const Login = () => {
   const { userInfo } = useSelector((state) => state.auth);
 
   const location = useLocation();
-  const from = location.state?.from || '/login';
+  const from = location.state?.from || '/create';
 
   useEffect(() => {
     if (userInfo) {

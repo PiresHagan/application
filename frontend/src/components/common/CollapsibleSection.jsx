@@ -17,42 +17,42 @@ const CollapsibleSection = ({
   onExpand,
   onDisabledClick,
   children,
+  ownerId,
+  sectionName,
+  expandedSections
 }) => {
-  const handleClick = (event) => {
-    if (!isEnabled) {
-      event.stopPropagation();
-      onDisabledClick?.();
-    }
-  };
+  const sectionId = `section-${ownerId}-${sectionName}`;
 
   return (
-    <Accordion
-      expanded={isExpanded}
-      onChange={onExpand}
-      disabled={!isEnabled}
-      onClick={handleClick}
-      sx={{
-        '&.Mui-disabled': {
-          bgcolor: 'action.disabledBackground',
-          cursor: 'pointer',
-        },
-        mb: 2
-      }}
-    >
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {isValid ? (
-            <CheckCircleIcon color="success" />
-          ) : (
-            <></>
-          )}
-          <Typography>{title}</Typography>
-        </Box>
-      </AccordionSummary>
-      <AccordionDetails>
-        {children}
-      </AccordionDetails>
-    </Accordion>
+    <div id={sectionId} style={{ marginBottom: '16px' }}>
+      <Accordion
+        expanded={isExpanded || expandedSections?.[`${ownerId}-${sectionName}`] || false}
+        onChange={onExpand}
+        disabled={!isEnabled}
+        onClick={() => !isEnabled && onDisabledClick()}
+        sx={{
+          '&.Mui-disabled': {
+            bgcolor: 'action.disabledBackground',
+            cursor: 'pointer',
+          },
+          mb: 2
+        }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {isValid ? (
+              <CheckCircleIcon color="success" />
+            ) : (
+              <></>
+            )}
+            <Typography>{title}</Typography>
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails>
+          {children}
+        </AccordionDetails>
+      </Accordion>
+    </div>
   );
 };
 

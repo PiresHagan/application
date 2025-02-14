@@ -1,21 +1,18 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Typography,
   Box,
-  Tabs,
-  Tab,
   RadioGroup,
   FormControlLabel,
   Radio,
   Button,
-  Divider,
   Grid,
-  IconButton,
   Alert,
   Stepper,
   Step,
   StepLabel,
+  TextField,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { toast } from 'react-toastify';
@@ -28,20 +25,27 @@ import ContactInfo from '../components/owner/ContactInfo';
 import CollapsibleSection from '../components/common/CollapsibleSection';
 import CreateLayout from '../layouts/CreateLayout';
 import Loader from '../components/common/Loader';
+import { validateSection, validateOwnerDetails, validateOccupation, validateContact, validateAddress, validateField } from '../utils/validations';
+
+// Constants for better maintainability
+const INITIAL_OWNER = {
+  id: 1,
+  isMainOwner: true,
+  ownerType: '01',
+  sameAsMailingAddress: true,
+  addressCountry: '01',
+  mailingAddressCountry: '01',
+  countryCode: '01',
+};
+
+const SECTION_ORDER = {
+  '01': ['ownerDetails', 'occupation', 'contact', 'address'],
+  '02': ['ownerDetails', 'contact', 'address']
+};
 
 function Create() {
   const [activeStep, setActiveStep] = useState(0);
-  const [owners, setOwners] = React.useState([
-    {
-      id: 1,
-      isMainOwner: true,
-      ownerType: '01',
-      sameAsMailingAddress: true,
-      addressCountry: '01',
-      mailingAddressCountry: '01',
-      countryCode: '01',
-    }
-  ]);
+  const [owners, setOwners] = useState([INITIAL_OWNER]);
   const newOwnerRef = useRef(null);
   const [formErrors, setFormErrors] = React.useState(false);
   const [dropdownValues, setDropdownValues] = useState({
@@ -55,14 +59,10 @@ function Create() {
   const [applicationNumber, setApplicationNumber] = useState('');
   const mailingAddressRef = useRef(null);
   const [expandedSections, setExpandedSections] = useState({
-    1: 'ownerDetails'
+    1: 'ownerDetails',
+    '1-ownerDetails': true
   });
-  const [sectionValidation, setSectionValidation] = useState({
-    ownerDetails: false,
-    occupation: false,
-    contact: false,
-    address: false
-  });
+  const [sectionValidation, setSectionValidation] = useState({});
   const [attemptedSections, setAttemptedSections] = useState({});
   const [currentOwnerId, setCurrentOwnerId] = useState(1);
 
@@ -84,32 +84,142 @@ function Create() {
     setActiveStep((prevStep) => prevStep - 1);
   };
 
-  const handleAddOwner = () => {
+  const getSectionOrder = useCallback((ownerType) => {
+    return SECTION_ORDER[ownerType] || SECTION_ORDER['01'];
+  }, []);
+
+  const validateOwnerSection = useCallback((owner, section) => {
+    const { isValid } = validateSection(owner, section, owner.countryCode);
+    return isValid;
+  }, []);
+
+  const handleSectionChange = (ownerId, section) => (event, isExpanded) => {
+    if (!isExpanded) return;
+    setFormErrors(false);
+
+    const currentOwner = owners.find(owner => owner.id === ownerId);
+    const sectionsOrder = currentOwner.ownerType === '02'
+      ? ['ownerDetails', 'contact', 'address']
+      : ['ownerDetails', 'occupation', 'contact', 'address'];
+
+    const currentIndex = sectionsOrder.indexOf(section);
+    const previousSections = sectionsOrder.slice(0, currentIndex);
+
+    // Check if previous sections are valid
+    const canExpand = previousSections.every(
+      prevSection => sectionValidation[ownerId]?.[prevSection]
+    );
+
+    if (!canExpand) return;
+
+    // Update expanded sections while keeping previous sections expanded
+    setExpandedSections(prev => ({
+      ...prev,
+      [ownerId]: section,
+      [`${ownerId}-${section}`]: true
+    }));
+
+    // Scroll to the selected section
+    setTimeout(() => {
+      const sectionElement = document.getElementById(`section-${ownerId}-${section}`);
+      if (sectionElement) {
+        sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
+  const handleDisabledSectionClick = (ownerId, section) => {
+    const currentOwner = owners.find(owner => owner.id === ownerId);
+    const sectionsOrder = currentOwner.ownerType === '02'
+      ? ['ownerDetails', 'contact', 'address']
+      : ['ownerDetails', 'occupation', 'contact', 'address'];
+
+    const currentIndex = sectionsOrder.indexOf(section);
+    const previousSections = sectionsOrder.slice(0, currentIndex);
+
+    // Mark all previous sections and current section as attempted
+    setAttemptedSections(prev => ({
+      ...prev,
+      [ownerId]: {
+        ...prev[ownerId],
+        ...previousSections.reduce((acc, sec) => ({ ...acc, [sec]: true }), {}),
+        [section]: true
+      }
+    }));
+
+    // Force error display
+    setFormErrors(true);
+
+    // Validate and update section validation state
+    const newValidation = {};
+    previousSections.forEach(sec => {
+      const { isValid } = validateSection(currentOwner, sec, currentOwner.countryCode);
+      newValidation[sec] = isValid;
+    });
+
+    setSectionValidation(prev => ({
+      ...prev,
+      [ownerId]: {
+        ...prev[ownerId],
+        ...newValidation
+      }
+    }));
+  };
+
+  const shouldShowFieldError = (ownerId, sectionName, fieldName) => {
+    const owner = owners.find(o => o.id === ownerId);
+    let sectionName1 = sectionName;
+    if (sectionName === 'ownerDetails') {
+      sectionName1 = owner.ownerType === '01'
+        ? 'individual'
+        : 'corporate';
+    };
+    return formErrors &&
+      attemptedSections[ownerId]?.[sectionName] &&
+      owner &&
+      !validateField(fieldName, owner[fieldName], sectionName1, owner.countryCode).isValid;
+  };
+
+  const getFieldErrorMessage = (ownerId, sectionName, fieldName) => {
+    if (!shouldShowFieldError(ownerId, sectionName, fieldName)) return "";
+    if (sectionName === 'ownerDetails') {
+      sectionName = owners.find(o => o.id === ownerId).ownerType === '01'
+        ? 'individual'
+        : 'corporate';
+    }
+
+    const owner = owners.find(o => o.id === ownerId);
+    const { error } = validateField(
+      fieldName,
+      owner[fieldName],
+      sectionName,
+      owner.countryCode
+    );
+    return error || "";
+  };
+
+  const handleAddOwner = useCallback(() => {
     if (owners.length < 2) {
       const newOwnerId = owners.length + 1;
       const newOwner = {
+        ...INITIAL_OWNER,
         id: newOwnerId,
         isMainOwner: false,
-        ownerType: '01',
-        sameAsMailingAddress: true,
-        addressCountry: '01',
-        mailingAddressCountry: '01',
-        countryCode: '01',
       };
-      setOwners([...owners, newOwner]);
 
+      setOwners(prev => [...prev, newOwner]);
       setExpandedSections(prev => ({
         ...prev,
-        [newOwnerId]: 'ownerDetails'
+        [newOwnerId]: 'ownerDetails',
+        [`${newOwnerId}-ownerDetails`]: true
       }));
-
       setFormErrors(false);
 
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         newOwnerRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      });
     }
-  };
+  }, [owners.length]);
 
   const handleRemoveOwner = (ownerId) => {
     setOwners(owners.filter(owner => owner.id !== ownerId));
@@ -132,56 +242,17 @@ function Create() {
     }
   };
 
-  const validateOwnerDetails = (owner) => {
-    const fields = owner.ownerType === '01' ? [
-      'firstName',
-      'lastName',
-      'dateOfBirth',
-      'gender',
-      'tobacco',
-      'countryCode',
-      'state',
-      'ssn'
-    ] : ['companyName', 'businessRegistration', 'businessType', 'relationshipToInsured', 'countryCode', 'state'];
-    return fields.every(field => owner[field] && owner[field].toString().trim() !== '');
-  };
-
-  const validateOccupation = (owner) => {
-    const fields = ['employer', 'occupation', 'netWorth', 'annualIncome'];
-    return fields.every(field => owner[field] && owner[field].toString().trim() !== '');
-  };
-
-  const validateContact = (owner) => {
-    const fields = ['primaryPhone', 'email'];
-    return fields.every(field => owner[field] && owner[field].toString().trim() !== '');
-  };
-
-  const validateAddress = (owner) => {
-    const fields = [
-      'addressLine1',
-      'addressCity',
-      'addressState',
-      'addressZipCode',
-      ...(owner.sameAsMailingAddress ? [] : [
-        'mailingAddressLine1',
-        'mailingCity',
-        'mailingState',
-        'mailingZipCode'
-      ])
-    ];
-    return fields.every(field => owner[field] && owner[field].toString().trim() !== '');
-  };
-
-  const handleFieldChange = (ownerId, fieldName, value) => {
-    setOwners(owners.map(owner => {
+  const handleFieldChange = useCallback((ownerId, fieldName, value) => {
+    setOwners(prev => prev.map(owner => {
       if (owner.id === ownerId) {
         const updatedOwner = { ...owner, [fieldName]: value };
 
+        // Update validation state
         const newValidation = {
-          ownerDetails: validateOwnerDetails(updatedOwner),
-          occupation: validateOccupation(updatedOwner),
-          contact: validateContact(updatedOwner),
-          address: validateAddress(updatedOwner)
+          ownerDetails: validateOwnerSection(updatedOwner, 'ownerDetails'),
+          occupation: updatedOwner.ownerType === '02' ? true : validateOwnerSection(updatedOwner, 'occupation'),
+          contact: validateOwnerSection(updatedOwner, 'contact'),
+          address: validateOwnerSection(updatedOwner, 'address')
         };
 
         setSectionValidation(prev => ({
@@ -189,128 +260,63 @@ function Create() {
           [ownerId]: newValidation
         }));
 
-        const sectionsOrder = updatedOwner.ownerType === '02'
-          ? ['ownerDetails', 'contact', 'address']  
-          : ['ownerDetails', 'occupation', 'contact', 'address'];  
-
-        const currentSection = expandedSections[ownerId];
-        const currentIndex = sectionsOrder.indexOf(currentSection);
-
-        if (newValidation[currentSection]) {
-          const nextSection = sectionsOrder[currentIndex + 1];
-          if (nextSection) {
-            setExpandedSections(prev => ({
-              ...prev,
-              [ownerId]: nextSection
-            }));
-
-            setFormErrors(false);
-            setAttemptedSections(prev => ({
-              ...prev,
-              [ownerId]: {
-                ...prev[ownerId],
-                [currentSection]: true,
-                [nextSection]: false
-              }
-            }));
-          }
-        }
-
         return updatedOwner;
       }
       return owner;
     }));
-  };
-
-  const handleSectionChange = (ownerId, section) => (event, isExpanded) => {
-    setCurrentOwnerId(ownerId);
-
-    const currentOwner = owners.find(owner => owner.id === ownerId);
-    const isEnabled = section === 'ownerDetails' ? true :
-      section === 'occupation' ? sectionValidation[ownerId]?.ownerDetails :
-        section === 'contact' ? (currentOwner.ownerType === '01' ? sectionValidation[ownerId]?.occupation : sectionValidation[ownerId]?.ownerDetails) :
-          section === 'address' ? sectionValidation[ownerId]?.contact : false;
-
-    if (!isEnabled) {
-      const sectionsOrder = ['ownerDetails', 'occupation', 'contact', 'address'];
-      const currentIndex = sectionsOrder.indexOf(section);
-      const previousSections = sectionsOrder.slice(0, currentIndex);
-
-      setAttemptedSections(prev => ({
-        ...prev,
-        [ownerId]: {
-          ...prev[ownerId],
-          ...previousSections.reduce((acc, sec) => ({ ...acc, [sec]: true }), {})
-        }
-      }));
-
-      setFormErrors(true);
-      return;
-    }
-
-    if (isExpanded) {
-      setAttemptedSections(prev => ({
-        ...prev,
-        [ownerId]: {
-          ...prev[ownerId],
-          [section]: true
-        }
-      }));
-
-      let canExpand = true;
-      const sectionsOrder = ['ownerDetails', 'occupation', 'contact', 'address'];
-      const currentIndex = sectionsOrder.indexOf(section);
-      const previousSections = sectionsOrder.slice(0, currentIndex);
-
-      for (const prevSection of previousSections) {
-        if (!sectionValidation[ownerId]?.[prevSection]) {
-          canExpand = false;
-          setAttemptedSections(prev => ({
-            ...prev,
-            [ownerId]: {
-              ...prev[ownerId],
-              ...previousSections.reduce((acc, sec) => ({ ...acc, [sec]: true }), {})
-            }
-          }));
-          break;
-        }
-      }
-
-      if (!canExpand) {
-        setFormErrors(true);
-        return;
-      }
-    }
-
-    setExpandedSections(prev => ({
-      ...prev,
-      [ownerId]: isExpanded ? section : false
-    }));
-  };
-
-  const handleDisabledSectionClick = (ownerId, section) => {
-    const sectionsOrder = ['ownerDetails', 'occupation', 'contact', 'address'];
-    const currentIndex = sectionsOrder.indexOf(section);
-    const previousSections = sectionsOrder.slice(0, currentIndex);
-
-    setAttemptedSections(prev => ({
-      ...prev,
-      [ownerId]: {
-        ...prev[ownerId],
-        ...previousSections.reduce((acc, sec) => ({ ...acc, [sec]: true }), {}),
-        [section]: false
-      }
-    }));
-
-    setFormErrors(true);
-  };
+  }, [validateOwnerSection]);
 
   const handleSaveAndContinue = async () => {
-    const isValid = owners.every(owner => validateOwnerDetails(owner) && validateContact(owner) && validateAddress(owner) && (owner.ownerType === '01' ? validateOccupation(owner) : true));
-    console.log(isValid);
+    // Mark all sections as attempted to show validation errors
+    setFormErrors(true);
+
+    owners.forEach(owner => {
+      const sectionsToValidate = owner.ownerType === '02'
+        ? ['ownerDetails', 'contact', 'address']
+        : ['ownerDetails', 'occupation', 'contact', 'address'];
+
+      // Mark all sections as attempted
+      setAttemptedSections(prev => ({
+        ...prev,
+        [owner.id]: {
+          ...prev[owner.id],
+          ...sectionsToValidate.reduce((acc, section) => ({
+            ...acc,
+            [section]: true
+          }), {})
+        }
+      }));
+
+      // Update section validation state
+      const newValidation = {};
+      sectionsToValidate.forEach(section => {
+        const { isValid } = validateSection(owner, section, owner.countryCode);
+        newValidation[section] = isValid;
+      });
+
+      setSectionValidation(prev => ({
+        ...prev,
+        [owner.id]: {
+          ...prev[owner.id],
+          ...newValidation
+        }
+      }));
+    });
+
+    // Validate all sections for all owners
+    const isValid = owners.every(owner => {
+      const sectionsToValidate = owner.ownerType === '02'
+        ? ['ownerDetails', 'contact', 'address']
+        : ['ownerDetails', 'occupation', 'contact', 'address'];
+
+      return sectionsToValidate.every(section => {
+        const { isValid } = validateSection(owner, section, owner.countryCode);
+        return isValid;
+      });
+    });
 
     if (!isValid) {
-      setFormErrors(true);
+      toast.error('Please complete all required fields correctly');
       return;
     }
 
@@ -347,7 +353,6 @@ function Create() {
               stateCode: owner.addressState,
               countryCode: owner.addressCountry,
               zipCode: owner.addressZipCode
-
             },
             ...(!owner.sameAsMailingAddress ? [{
               typeCode: "02",
@@ -361,15 +366,13 @@ function Create() {
           ]
         }))
       };
-
       console.log(ownerRequest);
 
-      await saveOwners(ownerRequest).unwrap();
-      setFormErrors(false);
+      const response = await saveOwners(ownerRequest).unwrap();
       toast.success('Owners saved successfully!');
       setActiveStep((prevStep) => prevStep + 1);
     } catch (error) {
-      console.error('Error saving owners:', error);
+      toast.error('Error saving owners: ' + error.message);
     }
   };
 
@@ -458,29 +461,19 @@ function Create() {
                       position: 'relative'
                     }}
                   >
-                    {!owner.isMainOwner && (
-                      <IconButton
-                        onClick={() => handleRemoveOwner(owner.id)}
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          color: 'error.main',
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    )}
 
                     {owner.ownerType === '01' ? (
                       <>
                         <CollapsibleSection
                           title="Owner Details"
                           isEnabled={true}
-                          isExpanded={expandedSections[owner.id] === 'ownerDetails'}
+                          isExpanded={expandedSections[owner.id] === 'ownerDetails' || expandedSections[`${owner.id}-ownerDetails`]}
                           isValid={sectionValidation[owner.id]?.ownerDetails}
                           onExpand={handleSectionChange(owner.id, 'ownerDetails')}
                           onDisabledClick={() => handleDisabledSectionClick(owner.id, 'ownerDetails')}
+                          ownerId={owner.id}
+                          sectionName="ownerDetails"
+                          expandedSections={expandedSections}
                         >
                           <RadioGroup
                             row
@@ -501,24 +494,30 @@ function Create() {
                           </RadioGroup>
                           <IndividualInfo
                             owner={owner}
-                            formErrors={formErrors || attemptedSections[owner.id]?.ownerDetails}
                             dropdownValues={dropdownValues}
                             handleFieldChange={handleFieldChange}
+                            shouldShowError={shouldShowFieldError}
+                            getErrorMessage={getFieldErrorMessage}
                           />
                         </CollapsibleSection>
 
                         <CollapsibleSection
                           title="Occupation"
                           isEnabled={sectionValidation[owner.id]?.ownerDetails}
-                          isExpanded={expandedSections[owner.id] === 'occupation'}
+                          isExpanded={expandedSections[owner.id] === 'occupation' || expandedSections[`${owner.id}-occupation`]}
                           isValid={sectionValidation[owner.id]?.occupation}
                           onExpand={handleSectionChange(owner.id, 'occupation')}
                           onDisabledClick={() => handleDisabledSectionClick(owner.id, 'occupation')}
+                          ownerId={owner.id}
+                          sectionName="occupation"
+                          expandedSections={expandedSections}
                         >
                           <OccupationInfo
                             owner={owner}
-                            formErrors={formErrors || attemptedSections[owner.id]?.occupation}
+                            dropdownValues={dropdownValues}
                             handleFieldChange={handleFieldChange}
+                            shouldShowError={shouldShowFieldError}
+                            getErrorMessage={getFieldErrorMessage}
                           />
                         </CollapsibleSection>
                       </>
@@ -526,10 +525,13 @@ function Create() {
                       <CollapsibleSection
                         title="Owner Details"
                         isEnabled={true}
-                        isExpanded={expandedSections[owner.id] === 'ownerDetails'}
+                        isExpanded={expandedSections[owner.id] === 'ownerDetails' || expandedSections[`${owner.id}-ownerDetails`]}
                         isValid={sectionValidation[owner.id]?.ownerDetails}
                         onExpand={handleSectionChange(owner.id, 'ownerDetails')}
                         onDisabledClick={() => handleDisabledSectionClick(owner.id, 'ownerDetails')}
+                        ownerId={owner.id}
+                        sectionName="ownerDetails"
+                        expandedSections={expandedSections}
                       >
                         <RadioGroup
                           row
@@ -550,9 +552,10 @@ function Create() {
                         </RadioGroup>
                         <CorporateInfo
                           owner={owner}
-                          formErrors={formErrors || attemptedSections[owner.id]?.ownerDetails}
                           dropdownValues={dropdownValues}
                           handleFieldChange={handleFieldChange}
+                          shouldShowError={shouldShowFieldError}
+                          getErrorMessage={getFieldErrorMessage}
                         />
                       </CollapsibleSection>
                     )}
@@ -560,35 +563,60 @@ function Create() {
                     <CollapsibleSection
                       title="Contact Information"
                       isEnabled={owner.ownerType === '01' ? sectionValidation[owner.id]?.occupation : sectionValidation[owner.id]?.ownerDetails}
-                      isExpanded={expandedSections[owner.id] === 'contact'}
+                      isExpanded={expandedSections[owner.id] === 'contact' || expandedSections[`${owner.id}-contact`]}
                       isValid={sectionValidation[owner.id]?.contact}
                       onExpand={handleSectionChange(owner.id, 'contact')}
                       onDisabledClick={() => handleDisabledSectionClick(owner.id, 'contact')}
+                      ownerId={owner.id}
+                      sectionName="contact"
+                      expandedSections={expandedSections}
                     >
                       <ContactInfo
                         owner={owner}
-                        formErrors={formErrors && attemptedSections[owner.id]?.contact}
                         handleFieldChange={handleFieldChange}
+                        shouldShowError={shouldShowFieldError}
+                        getErrorMessage={getFieldErrorMessage}
                       />
                     </CollapsibleSection>
 
                     <CollapsibleSection
                       title="Address Details"
                       isEnabled={sectionValidation[owner.id]?.contact}
-                      isExpanded={expandedSections[owner.id] === 'address'}
+                      isExpanded={expandedSections[owner.id] === 'address' || expandedSections[`${owner.id}-address`]}
                       isValid={sectionValidation[owner.id]?.address}
                       onExpand={handleSectionChange(owner.id, 'address')}
                       onDisabledClick={() => handleDisabledSectionClick(owner.id, 'address')}
+                      ownerId={owner.id}
+                      sectionName="address"
+                      expandedSections={expandedSections}
                     >
                       <AddressInfo
                         owner={owner}
-                        formErrors={formErrors || attemptedSections[owner.id]?.address}
                         dropdownValues={dropdownValues}
                         handleFieldChange={handleFieldChange}
                         handleSameAsMailingAddressChange={handleSameAsMailingAddressChange}
                         mailingAddressRef={mailingAddressRef}
+                        shouldShowError={shouldShowFieldError}
+                        getErrorMessage={getFieldErrorMessage}
                       />
                     </CollapsibleSection>
+                    {!owner.isMainOwner && (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'row-reverse',
+                        }}
+                      >
+                        <Button
+                          variant="contained"
+                          onClick={() => handleRemoveOwner(owner.id)}
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    )}
                   </Box>
                 ))}
 
@@ -639,19 +667,6 @@ function Create() {
                   </Box>
                 </Box>
               </>
-            )}
-
-            {formErrors && (
-              <Grid container justifyContent="center">
-                <Grid item xs={12} md={3}>
-                  <Alert
-                    severity="error"
-                    sx={{ mt: 2 }}
-                  >
-                    Please complete all required fields.
-                  </Alert>
-                </Grid>
-              </Grid>
             )}
           </Container>
         </Box>

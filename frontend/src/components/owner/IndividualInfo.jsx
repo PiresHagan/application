@@ -1,13 +1,16 @@
 import React from 'react';
 import { Grid, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
-const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }) => {
-
-
+const IndividualInfo = ({
+  owner,
+  dropdownValues,
+  handleFieldChange,
+  shouldShowError,
+  getErrorMessage
+}) => {
   return (
     <Grid container spacing={2}>
       {/* First Name */}
-
       <Grid item xs={12} md={6}>
         <TextField
           fullWidth
@@ -15,7 +18,8 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           placeholder="First Name"
           value={owner.firstName || ''}
           onChange={(e) => handleFieldChange(owner.id, 'firstName', e.target.value)}
-          error={formErrors && !owner.firstName}
+          error={shouldShowError(owner.id, 'ownerDetails', 'firstName')}
+          helperText={getErrorMessage(owner.id, 'ownerDetails', 'firstName')}
           size="medium"
         />
       </Grid>
@@ -28,7 +32,8 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           placeholder="Last Name"
           value={owner.lastName || ''}
           onChange={(e) => handleFieldChange(owner.id, 'lastName', e.target.value)}
-          error={formErrors && !owner.lastName}
+          error={shouldShowError(owner.id, 'ownerDetails', 'lastName')}
+          helperText={getErrorMessage(owner.id, 'ownerDetails', 'lastName')}
           size="medium"
         />
       </Grid>
@@ -42,7 +47,8 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           label="Date of Birth"
           value={owner.dateOfBirth || ''}
           onChange={(e) => handleFieldChange(owner.id, 'dateOfBirth', e.target.value)}
-          error={formErrors && !owner.dateOfBirth}
+          error={shouldShowError(owner.id, 'ownerDetails', 'dateOfBirth')}
+          helperText={getErrorMessage(owner.id, 'ownerDetails', 'dateOfBirth')}
           size="medium"
           InputLabelProps={{ shrink: true }}
         />
@@ -50,7 +56,12 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
 
       {/* Gender */}
       <Grid item xs={12} md={4}>
-        <FormControl fullWidth required size="medium" error={formErrors && !owner.gender}>
+        <FormControl
+          fullWidth
+          required
+          error={shouldShowError(owner.id, 'ownerDetails', 'gender')}
+          size="medium"
+        >
           <InputLabel>Gender</InputLabel>
           <Select
             value={owner.gender || ''}
@@ -66,7 +77,7 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
 
       {/* Tobacco Status */}
       <Grid item xs={12} md={4}>
-        <FormControl fullWidth required size="medium" error={formErrors && !owner.tobacco}>
+        <FormControl fullWidth required size="medium" error={Boolean(shouldShowError(owner.id, 'ownerDetails', 'tobacco'))}>
           <InputLabel>Tobacco Status</InputLabel>
           <Select
             value={owner.tobacco || ''}
@@ -80,14 +91,13 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
       </Grid>
 
       <Grid item xs={12} md={4}>
-        <FormControl fullWidth required size="medium" error={formErrors && !owner.countryCode}>
+        <FormControl fullWidth required size="medium" error={Boolean(shouldShowError(owner.id, 'ownerDetails', 'countryCode'))}>
           <InputLabel>Citizenship</InputLabel>
           <Select
             value={owner.countryCode || '01'}
             onChange={(e) => handleFieldChange(owner.id, 'countryCode', e.target.value)}
             label="Citizenship"
           >
-
             {dropdownValues.countries?.map((country) => (
               <MenuItem key={country.code} value={country.code}>
                 {country.description}
@@ -99,7 +109,7 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
       <Grid item xs={12} md={4}>
         <FormControl
           fullWidth
-          error={formErrors && !owner.state}
+          error={Boolean(shouldShowError(owner.id, 'ownerDetails', 'state'))}
           size="medium"
         >
           <InputLabel>{owner.countryCode === '01' ? 'State' : 'Province'}</InputLabel>
@@ -113,7 +123,6 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
                 <MenuItem key={state.code} value={state.code}>
                   {state.description}
                 </MenuItem>
-
               ))
               : dropdownValues.provinces?.map((province) => (
                 <MenuItem key={province.code} value={province.code}>
@@ -132,7 +141,8 @@ const IndividualInfo = ({ owner, formErrors, dropdownValues, handleFieldChange }
           placeholder="SSN"
           value={owner.ssn || ''}
           onChange={(e) => handleFieldChange(owner.id, 'ssn', e.target.value)}
-          error={formErrors && !owner.ssn}
+          error={Boolean(shouldShowError(owner.id, 'ownerDetails', 'ssn'))}
+          helperText={getErrorMessage(owner.id, 'ownerDetails', 'ssn')}
           size="medium"
         />
       </Grid>

@@ -332,19 +332,6 @@ function Dashboard() {
                 position: 'relative'
               }}
             >
-              {!owner.isMainOwner && (
-                <IconButton
-                  onClick={() => handleRemoveOwner(owner.id)}
-                  sx={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    color: 'error.main',
-                  }}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              )}
 
               {owner.ownerType === '01' ? (
                 <>
@@ -458,6 +445,15 @@ function Dashboard() {
                   mailingAddressRef={mailingAddressRef}
                 />
               </CollapsibleSection>
+              
+              {!owner.isMainOwner && (
+                <Button
+                variant="contained"
+                onClick={() => handleRemoveOwner(owner.id)}
+              >
+                Delete
+              </Button>
+              )}
             </Box>
           ))}
 

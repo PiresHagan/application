@@ -1,8 +1,14 @@
 import React from 'react';
 import { Grid, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
-const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues }) => {
-
+const CorporateInfo = ({
+  owner,
+  formErrors,
+  handleFieldChange,
+  dropdownValues,
+  shouldShowError,
+  getErrorMessage
+}) => {
   const businessTypes = [
     { value: 'corporation', label: 'Corporation' },
     { value: 'partnership', label: 'Partnership' },
@@ -18,6 +24,7 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
     { value: 'portfolio', label: 'Key Executives in Portfolio Companies' },
     { value: 'owner', label: 'Insured Individual or Business Owner' }
   ];
+
   return (
     <Grid container spacing={2}>
       <Grid item xs={12}>
@@ -27,20 +34,25 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
           placeholder="Company Name"
           value={owner.companyName || ''}
           onChange={(e) => handleFieldChange(owner.id, 'companyName', e.target.value)}
-          error={formErrors && !owner.companyName}
+          error={shouldShowError(owner.id, 'ownerDetails', 'companyName')}
+          helperText={getErrorMessage(owner.id, 'ownerDetails', 'companyName')}
           size="medium"
         />
       </Grid>
 
       <Grid item xs={12} md={6}>
-        <FormControl fullWidth required size="medium" error={formErrors && !owner.countryCode}>
+        <FormControl
+          fullWidth
+          required
+          size="medium"
+          error={shouldShowError(owner.id, 'ownerDetails', 'countryCode')}
+        >
           <InputLabel>Registered Country</InputLabel>
           <Select
             value={owner.countryCode || ''}
             onChange={(e) => handleFieldChange(owner.id, 'countryCode', e.target.value)}
             label="Registered Country"
           >
-
             {dropdownValues.countries?.map((country) => (
               <MenuItem key={country.code} value={country.code}>
                 {country.description}
@@ -51,18 +63,21 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
       </Grid>
 
       <Grid item xs={12} md={6}>
-        <FormControl fullWidth required size="medium" error={formErrors && !owner.state}>
+        <FormControl
+          fullWidth
+          required
+          size="medium"
+          error={shouldShowError(owner.id, 'ownerDetails', 'state')}
+        >
           <InputLabel>{owner.countryCode === '01' ? 'Registered State' : 'Registered Province'}</InputLabel>
           <Select
             value={owner.state || ''}
             onChange={(e) => handleFieldChange(owner.id, 'state', e.target.value)}
             label={owner.countryCode === '01' ? 'Registered State' : 'Registered Province'}
           >
-
             {owner.countryCode === '01'
               ? dropdownValues.states?.map((state) => (
                 <MenuItem key={state.code} value={state.code}>
-
                   {state.description}
                 </MenuItem>
               ))
@@ -83,13 +98,19 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
           placeholder="Business Registration Number"
           value={owner.businessRegistration || ''}
           onChange={(e) => handleFieldChange(owner.id, 'businessRegistration', e.target.value)}
-          error={formErrors && !owner.businessRegistration}
+          error={shouldShowError(owner.id, 'ownerDetails', 'businessRegistration')}
+          helperText={getErrorMessage(owner.id, 'ownerDetails', 'businessRegistration')}
           size="medium"
         />
       </Grid>
 
       <Grid item xs={12} md={6}>
-        <FormControl fullWidth required size="medium" error={formErrors && !owner.businessType}>
+        <FormControl
+          fullWidth
+          required
+          size="medium"
+          error={shouldShowError(owner.id, 'ownerDetails', 'businessType')}
+        >
           <InputLabel>Business Type</InputLabel>
           <Select
             value={owner.businessType || ''}
@@ -106,7 +127,12 @@ const CorporateInfo = ({ owner, formErrors, handleFieldChange, dropdownValues })
       </Grid>
 
       <Grid item xs={12}>
-        <FormControl fullWidth required size="medium" error={formErrors && !owner.relationshipToInsured}>
+        <FormControl
+          fullWidth
+          required
+          size="medium"
+          error={shouldShowError(owner.id, 'ownerDetails', 'relationshipToInsured')}
+        >
           <InputLabel>Relationship to Insured</InputLabel>
           <Select
             value={owner.relationshipToInsured || ''}

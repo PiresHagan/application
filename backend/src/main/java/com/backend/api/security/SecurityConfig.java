@@ -34,7 +34,12 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/users/register", "/api/users/login").permitAll()
+                .requestMatchers(
+                    "/api/users/register", 
+                    "/api/users/login",
+                    "/api/dropdowns",
+                    "/api/owners"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
@@ -51,7 +56,13 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(frontendUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization", 
+            "Content-Type", 
+            "X-Requested-With",
+            "Accept"
+        ));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 

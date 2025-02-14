@@ -20,7 +20,7 @@ public class OwnerSaveRequest {
       
         // frclient fields
         private String clientGUID;
-        private String typeCode;  // '01' for Individual, '02' for Corporate
+        private String typeCode;  
         private String firstName;
         private String lastName;
         private String companyName;
@@ -45,7 +45,7 @@ public class OwnerSaveRequest {
     @NoArgsConstructor
     public static class AddressDTO {
         private String addressGUID;
-        private String typeCode;  // '01' for Primary, '02' for Mailing
+        private String typeCode;  
         private String statusCode;
         private String addressLine1;
         private String addressLine2;
