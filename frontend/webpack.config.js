@@ -38,6 +38,7 @@ module.exports = (env, options) => {
     output: {
       filename: 'js/main.[contenthash].js',
       chunkFilename: 'js/main.[id].[contenthash].js',
+      publicPath: '/',
     },
 
     module: {

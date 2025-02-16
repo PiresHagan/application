@@ -1,22 +1,28 @@
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Layout from './layouts/layout';
+import { CssBaseline } from '@mui/material';
 
 import Counter from './pages/counter/counter';
 import Create from './pages/create';
 import Register from './pages/Auth/Register';
 import Login from './pages/Auth/login';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-function App() {
 
+function App() {
   return (
     <>
-      <Routes>
-        <Route path='/counter' exact element={<Counter />} />
-        <Route path='/create' exact element={<Create />} />
-        <Route path='/register' exact element={<Register />} />
-        <Route path='/login' exact element={<Login />} />
-      </Routes>
+      <CssBaseline />
+      <Layout>
+        <Routes>
+          <Route path="/counter" element={<Counter />} />
+          <Route path="/application/create" element={<Create />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+          {/* <Route path="*" element={<Navigate to="/" />} /> */}
+        </Routes>
+      </Layout>
       <ToastContainer />
     </>
   );

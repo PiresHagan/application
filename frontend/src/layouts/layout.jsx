@@ -1,19 +1,20 @@
 import React from 'react';
 import { Box, Container } from '@mui/material';
-import Header from './header/header';
-import Footer from './footer/footer';
-import './layout.css';
+import Sidebar from '../components/Sidebar/Sidebar';
 
 function Layout({ children }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Header />
-      <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
-        <Container>
-          {children}
-        </Container>
+    <Box
+      sx={{
+        paddingLeft: '45px',
+        width: '100%',
+        minHeight: '100vh',
+      }}
+    >
+      <Sidebar />
+      <Box component="main" sx={{ flexGrow: 1 }}>
+        {children}
       </Box>
-      <Footer />
     </Box>
   );
 }

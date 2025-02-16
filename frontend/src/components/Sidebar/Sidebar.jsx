@@ -1,225 +1,383 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import {
-  Drawer,
-  IconButton,
+  Box,
   List,
   ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Divider,
-  Collapse,
+  Popover,
+  Typography,
+  Button,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
-  Dashboard as DashboardIcon,
-  Search as SearchIcon,
-  Info as InfoIcon,
-  Event as EventIcon,
-  Description as ApplicationIcon,
-  Add as CreateIcon,
-  ExpandLess,
-  ExpandMore,
+  HomeOutlined as HomeIcon,
+  CreateOutlined as CreateIcon,
+  SearchOutlined as SearchIcon,
+  InfoOutlined as ApplicationIcon,
+  AssignmentOutlined as UnderwritingIcon,
+  SettingsOutlined as SettingsIcon,
+  PersonOutlined as PersonIcon,
+  Apps as MenuIcon,
+  Login as LoginIcon,
 } from '@mui/icons-material';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../slices/authSlice';
 
 function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [openSubmenu, setOpenSubmenu] = useState(false);
+  const { userInfo } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const location = useLocation();
-
-  const handleDrawerToggle = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const handleSubmenuToggle = () => {
-    setOpenSubmenu(!openSubmenu);
-  };
-
-  const handleNavigation = (path) => {
-    navigate(path);
-    setIsOpen(false);
-  };
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [activeMenu, setActiveMenu] = useState(null);
+  const dispatch = useDispatch();
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'App1', icon: <SearchIcon />, path: '/search' },
-    { text: 'App2', icon: <InfoIcon />, path: '/policy-info' },
-    { text: 'App3', icon: <EventIcon />, path: '/events' },
     {
-      text: 'Application',
-      icon: <ApplicationIcon />,
-      submenu: [
-        { text: 'Search', icon: <SearchIcon />, path: '/application/search' },
-        { text: 'Create', icon: <CreateIcon />, path: '/application/create' },
-      ],
+      id: 'home',
+      icon: <HomeIcon />,
+      path: '/',
+      label: 'Home'
     },
+    {
+      id: 'illustration',
+      icon: <CreateIcon />,
+      label: 'Illustration',
+      submenu: [
+        { label: 'Search', path: '/illustration/search', icon: <SearchIcon /> },
+        { label: 'Create', path: '/illustration/create', icon: <CreateIcon /> }
+      ]
+    },
+    {
+      id: 'application',
+      icon: <ApplicationIcon />,
+      label: 'Application',
+      submenu: [
+        { label: 'Search', path: '/application/search', icon: <SearchIcon /> },
+        { label: 'Create', path: '/application/create', icon: <CreateIcon /> }
+      ]
+    },
+    {
+      id: 'underwriting',
+      icon: <UnderwritingIcon />,
+      label: 'Underwriting',
+      path: '/underwriting'
+    }
   ];
 
-  const drawer = (
-    <List sx={{ pt: 2 }}>
-      {menuItems.map((item) => (
-        <React.Fragment key={item.text}>
-          {item.submenu ? (
-            <>
-              <ListItem disablePadding>
-                <ListItemButton
-                  onClick={handleSubmenuToggle}
-                  sx={{
-                    borderRadius: 1,
-                    mx: 1,
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.text}
-                    sx={{
-                      '& .MuiTypography-root': {
-                        fontSize: '0.875rem',
-                      },
-                    }}
-                  />
-                  {openSubmenu ? <ExpandLess /> : <ExpandMore />}
-                </ListItemButton>
-              </ListItem>
-              <Collapse in={openSubmenu} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {item.submenu.map((subItem) => (
-                    <ListItem key={subItem.text} disablePadding>
-                      <ListItemButton
-                        onClick={() => handleNavigation(subItem.path)}
-                        selected={location.pathname === subItem.path}
-                        sx={{
-                          pl: 4,
-                          borderRadius: 1,
-                          mx: 1,
-                          '&.Mui-selected': {
-                            backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                            color: '#1976d2',
-                            '&:hover': {
-                              backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                            },
-                          },
-                          '&:hover': {
-                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                          },
-                        }}
-                      >
-                        <ListItemIcon
-                          sx={{
-                            minWidth: 40,
-                            color: location.pathname === subItem.path ? '#1976d2' : 'inherit'
-                          }}
-                        >
-                          {subItem.icon}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={subItem.text}
-                          sx={{
-                            '& .MuiTypography-root': {
-                              fontSize: '0.875rem',
-                              fontWeight: location.pathname === subItem.path ? 500 : 400,
-                            },
-                          }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
-              </Collapse>
-            </>
-          ) : (
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => handleNavigation(item.path)}
-                selected={location.pathname === item.path}
-                sx={{
-                  borderRadius: 1,
-                  mx: 1,
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                    color: '#1976d2',
-                    '&:hover': {
-                      backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                    },
+  const bottomMenuItems = [
+    {
+      id: 'settings',
+      icon: <SettingsIcon />,
+      label: 'Settings',
+      submenu: [
+        { label: 'Option 1', path: '/settings/option1', icon: <SearchIcon /> },
+        { label: 'Option 2', path: '/settings/option2', icon: <SearchIcon /> },
+        { label: 'Option 3', path: '/settings/option3', icon: <SearchIcon /> }
+      ]
+    },
+    {
+      id: 'profile',
+      icon: userInfo ? <PersonIcon /> : <LoginIcon />,
+      label: userInfo ? 'Profile' : 'Login',
+      onClick: () => handleProfileClick()
+    }
+  ];
+
+  const handleMenuClick = (item, event) => {
+    if (item.submenu) {
+      setAnchorEl(event.currentTarget);
+      setActiveMenu(item.id);
+    } else if (item.path) {
+      navigate(item.path);
+    } else if (item.onClick) {
+      item.onClick();
+    }
+  };
+
+  const handleProfileClick = () => {
+    // Show profile info popup
+    setAnchorEl(document.getElementById('profile-button'));
+    setActiveMenu('profile');
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setActiveMenu(null);
+  };
+
+  // Add this helper function to check if menu item is active
+  const isMenuActive = (item) => {
+    if (item.path) {
+      return location.pathname === item.path;
+    }
+    if (item.submenu) {
+      return item.submenu.some(subItem => location.pathname === subItem.path);
+    }
+    return false;
+  };
+
+  const renderProfileContent = () => {
+    if (userInfo) {
+      // User is logged in
+      return (
+        <Box sx={{ p: 2, width: 250 }}>
+          <Typography variant="subtitle1">{userInfo.name}</Typography>
+          <Typography variant="body2">{userInfo.email}</Typography>
+          <Typography variant="body2">
+            Security Group: {userInfo.role || 'User'}
+          </Typography>
+          <Button
+            fullWidth
+            variant="outlined"
+            color="primary"
+            onClick={() => {
+              dispatch(logout());
+              handleClose();
+            }}
+            sx={{ mt: 2 }}
+          >
+            Logout
+          </Button>
+        </Box>
+      );
+    } else {
+      // User is not logged in
+      return (
+        <Box sx={{ p: 2, width: 250 }}>
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+            Sign in to your account
+          </Typography>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              navigate('/login');
+              handleClose();
+            }}
+            sx={{ mb: 1 }}
+          >
+            Login
+          </Button>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => {
+              navigate('/register');
+              handleClose();
+            }}
+          >
+            Register
+          </Button>
+        </Box>
+      );
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        width: 45,
+        height: '100vh',
+        bgcolor: 'background.paper',
+        borderRight: '1px solid',
+        borderColor: 'divider',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        zIndex: 1200,
+      }}
+    >
+      <List sx={{ py: 2, flex: 1 }}>
+        <ListItem disablePadding sx={{ mb: 2 }}>
+          <ListItemButton
+            sx={{
+              minHeight: 40,
+              justifyContent: 'center',
+              px: 0,
+              '&:hover': {
+                bgcolor: 'primary.lighter',
+                '& .MuiSvgIcon-root': {
+                  color: 'primary.main',
+                },
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: 0,
+                justifyContent: 'center',
+                color: 'grey.500',
+              }}
+            >
+              <MenuIcon sx={{ fontSize: 20 }} />
+            </ListItemIcon>
+          </ListItemButton>
+        </ListItem>
+
+        {menuItems.map((item) => (
+          <ListItem key={item.id} disablePadding>
+            <ListItemButton
+              onClick={(e) => handleMenuClick(item, e)}
+              sx={{
+                minHeight: 40,
+                justifyContent: 'center',
+                px: 0,
+                mx: '6px',
+                borderRadius: 1,
+                position: 'relative',
+                '&:hover': {
+                  bgcolor: 'primary.lighter',
+                  '& .MuiSvgIcon-root': {
+                    color: 'primary.main',
                   },
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    left: -6,
+                    width: 4,
+                    height: 4,
+                    borderRadius: '50%',
+                    bgcolor: 'primary.main',
+                    transition: 'all 0.2s ease-in-out',
+                  },
+                },
+                ...(isMenuActive(item) && {
+                  bgcolor: 'primary.lighter',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    left: -6,
+                    width: 3,
+                    height: '100%',
+                    bgcolor: 'primary.main',
+                    borderRadius: 0,
+                    transition: 'all 0.2s ease-in-out',
+                  },
+                }),
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: 0,
+                  justifyContent: 'center',
+                  color: isMenuActive(item) ? 'primary.main' : 'grey.500',
+                  '& .MuiSvgIcon-root': {
+                    fontSize: 20,
                   },
                 }}
               >
-                <ListItemIcon sx={{
-                  minWidth: 40,
-                  color: location.pathname === item.path ? '#1976d2' : 'inherit'
-                }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.text}
-                  sx={{
-                    '& .MuiTypography-root': {
-                      fontSize: '0.875rem',
-                      fontWeight: location.pathname === item.path ? 500 : 400,
-                    },
+                {item.icon}
+              </ListItemIcon>
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+
+      <List sx={{ py: 2 }}>
+        {bottomMenuItems.map((item) => (
+          <ListItem key={item.id} disablePadding>
+            <ListItemButton
+              id={`${item.id}-button`}
+              onClick={(e) => handleMenuClick(item, e)}
+              sx={{
+                minHeight: 40,
+                justifyContent: 'center',
+                px: 0,
+                '&:hover': {
+                  bgcolor: 'primary.lighter',
+                  '& .MuiSvgIcon-root': {
+                    color: 'primary.main',
+                  },
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: 0,
+                  justifyContent: 'center',
+                  color: 'grey.500',
+                  '& .MuiSvgIcon-root': {
+                    fontSize: 20,
+                  },
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+
+      <Popover
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'center',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'center',
+          horizontal: 'left',
+        }}
+      >
+        {activeMenu === 'profile' ? (
+          renderProfileContent()
+        ) : (
+          <List>
+            {menuItems.find(item => item.id === activeMenu)?.submenu.map((subItem) => (
+              <ListItem key={subItem.path} disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    navigate(subItem.path);
+                    handleClose();
                   }}
-                />
-              </ListItemButton>
-            </ListItem>
-          )}
-        </React.Fragment>
-      ))}
-    </List>
-  );
-
-  return (
-    <>
-      <IconButton
-        color="inherit"
-        aria-label="open drawer"
-        edge="start"
-        onClick={handleDrawerToggle}
-        sx={{
-          position: 'absolute',
-          top: 24,
-          left: 24,
-          zIndex: 1200,
-          color: '#5B5B5B',
-          bgcolor: 'background.paper',
-          boxShadow: 1,
-          '&:hover': {
-            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-          },
-        }}
-      >
-        <MenuIcon />
-      </IconButton>
-
-      <Drawer
-        variant="temporary"
-        anchor="left"
-        open={isOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{
-          keepMounted: true,
-        }}
-        sx={{
-          '& .MuiDrawer-paper': {
-            width: 240,
-            boxSizing: 'border-box',
-            borderRight: 'none',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          },
-        }}
-      >
-        {drawer}
-      </Drawer>
-    </>
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 36,
+                      mr: 0.5
+                    }}
+                  >
+                    {subItem.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={subItem.label} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+            {bottomMenuItems.find(item => item.id === activeMenu)?.submenu.map((subItem) => (
+              <ListItem key={subItem.path} disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    navigate(subItem.path);
+                    handleClose();
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 36,
+                      mr: 0.5
+                    }}
+                  >
+                    {subItem.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={subItem.label} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Popover>
+    </Box>
   );
 }
 

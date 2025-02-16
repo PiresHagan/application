@@ -3,6 +3,8 @@ import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import { apiSlice } from '../slices/apiSlice';
 import authReducer from '../slices/authSlice';
+import stepReducer from '../slices/stepSlice';
+import ownerReducer from '../slices/ownerSlice';
 
 const persistConfig = {
   key: 'root',
@@ -17,6 +19,8 @@ const store = configureStore({
   reducer: {
     [apiSlice.reducerPath]: apiSlice.reducer,
     auth: persistedReducer,
+    step: stepReducer,
+    owner: ownerReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
