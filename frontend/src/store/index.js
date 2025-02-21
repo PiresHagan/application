@@ -5,7 +5,7 @@ import { apiSlice } from '../slices/apiSlice';
 import authReducer from '../slices/authSlice';
 import stepReducer from '../slices/stepSlice';
 import ownerReducer from '../slices/ownerSlice';
-
+import coverageOwnersReducer from '../slices/coverageOwnersSlice';
 const persistConfig = {
   key: 'root',
   storage,
@@ -21,6 +21,7 @@ const store = configureStore({
     auth: persistedReducer,
     step: stepReducer,
     owner: ownerReducer,
+    coverageOwners: coverageOwnersReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

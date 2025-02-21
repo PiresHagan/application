@@ -16,7 +16,7 @@ function Create() {
       case 0:
         return <Owner applicationNumber={applicationNumber} />;
       case 1:
-        return <Coverage />;
+        return <Coverage applicationNumber={applicationNumber} />;
       case 2:
         return <></>;
       default:
@@ -108,6 +108,28 @@ function Create() {
             flexDirection: 'column',
           }
         }}>
+          <Button
+            variant="contained"
+            color="inherit"
+            onClick={handleBack}
+            disabled={activeStep === 0}
+            sx={{
+              bgcolor: 'grey.500',
+              '&:hover': {
+                bgcolor: 'grey.600',
+              }
+            }}
+          >
+            Back Step
+          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              onClick={handleNext}
+            >
+              Next Step
+            </Button>
+          </Box>
         </Box>
       </Container>
     </Box>

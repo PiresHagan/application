@@ -28,18 +28,24 @@ public class SecurityConfig {
     @Value("${frontend.url}")
     private String frontendUrl;
 
+    private static final String[] PUBLIC_URLS = {
+        "/api/users/register", 
+        "/api/users/login",
+        "/api/dropdowns",
+        "/api/owners",
+        "/api/insured",
+        "/api/insured/{clientGUID}",
+        "/api/form/{formNumber}/owners"
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/users/register", 
-                    "/api/users/login",
-                    "/api/dropdowns",
-                    "/api/owners"
-                ).permitAll()
+                .requestMatchers(PUBLIC_URLS)
+                .permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
