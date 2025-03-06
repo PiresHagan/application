@@ -77,18 +77,24 @@ function Create() {
             alternativeLabel
             sx={{
               '& .MuiStepLabel-label': {
-                fontSize: '0.875rem',
-                mt: 1
+                fontSize: '1rem',
+                fontWeight: 600,
+                mt: 1.5,
+                color: '#333',
+              },
+              '& .MuiStepLabel-label.Mui-active': {
+                fontWeight: 700,
               },
               '& .MuiStepIcon-root': {
-                fontSize: '2rem',
+                fontSize: '2.2rem',
               },
               '& .MuiStepIcon-root.Mui-active': {
-                color: 'primary.main',
+                color: '#6246EA',
               },
               '& .MuiStepIcon-root.Mui-completed': {
-                color: 'success.main',
-              }
+                color: '#6246EA',
+              },
+              mb: 6
             }}
           >
             {steps.map((label) => (
@@ -99,7 +105,7 @@ function Create() {
           </Stepper>
         </Box>
         {_renderStepContent(activeStep)}
-        <Box sx={{
+        {/* <Box sx={{
           display: 'flex',
           justifyContent: 'space-between',
           gap: 2,
@@ -130,7 +136,7 @@ function Create() {
               Next Step
             </Button>
           </Box>
-        </Box>
+        </Box> */}
       </Container>
     </Box>
   );

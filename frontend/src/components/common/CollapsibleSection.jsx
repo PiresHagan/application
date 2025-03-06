@@ -45,7 +45,17 @@ const CollapsibleSection = ({
             ) : (
               <></>
             )}
-            <Typography>{title}</Typography>
+            {/* <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 500,
+                fontSize: '1.1rem',
+                color: '#333'
+              }}
+            >
+              {title}
+            </Typography> */}
+            <Typography variant="h6" fontWeight="bold">{title}</Typography>
           </Box>
         </AccordionSummary>
         <AccordionDetails>

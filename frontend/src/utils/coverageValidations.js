@@ -11,11 +11,34 @@ const validationRules = {
   },
   additional: {
     coverage: (value) => value && value.length > 0,
-    insured1: (value) => value && value.length > 0,
-    faceAmount: (value) => value && Number(value) > 0,
+    insured1: (value) => value && (value > 0 || value === 'add_new'),
+    faceAmount: (value) => value && Number(value) > 10000 && Number(value) < 10000000,
   },
   riders: {
     type: (value) => value && value !== 'Please Select',
+    waiverType: (value, data) => data.type !== 'Waiver of Premium' || (value && value.length > 0),
+    selectedPerson: (value, data) => {
+      if (['Waiver of Premium', 'Accidental Death Benefit', 'Disability Income Rider', 'Child Term'].includes(data.type)) {
+        return value !== undefined && value !== null && value.toString().length > 0;
+      }
+      return true;
+    },
+    faceAmount: (value, data) => {
+      if (['Accidental Death Benefit', 'Disability Income Rider'].includes(data.type)) {
+        return value && Number(value) > 10000;
+      }
+      if (data.type === 'Child Term') {
+        return value && Number(value) > 1000;
+      }
+      return true;
+    },
+    rating: (value, data) => {
+      if (['Accidental Death Benefit', 'Disability Income Rider'].includes(data.type)) {
+        return value && value.length > 0;
+      }
+      return true;
+    },
+    returnOfPremiumType: (value, data) => data.type !== 'Return of Premium' || (value && value.length > 0),
   },
 };
 
@@ -37,6 +60,16 @@ const errorMessages = {
   },
   riders: {
     type: 'Please select a valid rider type',
+    waiverType: 'Please select waiver type',
+    selectedPerson: 'Please select a person',
+    faceAmount: (data) => {
+      if (['Accidental Death Benefit', 'Disability Income Rider'].includes(data.type)) {
+        return 'Face amount must be greater than 10,000';
+      }
+      return 'Face amount must be greater than 1,000';
+    },
+    rating: 'Please select a rating',
+    returnOfPremiumType: 'Please select return of premium type',
   },
 };
 
@@ -82,15 +115,21 @@ export const validateAdditionalCoverageField = (coverage, fieldName) => {
   };
 };
 
-// Update validateAdditionalCoverage to track attempted fields
+// Update validateAdditionalCoverage to always validate required fields
 export const validateAdditionalCoverage = (coverage, attemptedFields = []) => {
   const errors = {};
   let isValid = true;
 
-  // Only validate attempted fields or all fields if attemptedFields is empty
-  const fieldsToValidate = attemptedFields.length > 0
-    ? attemptedFields
-    : Object.keys(validationRules.additional);
+  // Always validate required fields
+  const requiredFields = ['coverage', 'insured1', 'faceAmount'];
+
+  // Combine required fields with any other attempted fields
+  const fieldsToValidate = [...new Set([
+    ...requiredFields,
+    ...(attemptedFields.length > 0 ? attemptedFields : [])
+  ])];
+
+  console.log('Fields to validate:', fieldsToValidate, 'Attempted fields:', attemptedFields, 'Coverage:', coverage);
 
   fieldsToValidate.forEach(fieldName => {
     const { isValid: fieldValid, error } = validateAdditionalCoverageField(coverage, fieldName);
@@ -108,13 +147,25 @@ export const validateRider = (rider) => {
   const errors = {};
   let isValid = true;
 
-  Object.keys(validationRules.riders).forEach(fieldName => {
-    const { isValid: fieldValid, error } = validateField('riders', fieldName, rider[fieldName]);
-    if (!fieldValid) {
-      errors[fieldName] = error;
-      isValid = false;
-    }
-  });
+  // Validate type first
+  const typeValidation = validateField('riders', 'type', rider.type, rider);
+  if (!typeValidation.isValid) {
+    errors.type = typeValidation.error;
+    isValid = false;
+  }
+
+  // Only validate other fields if type is valid and not 'Please Select'
+  if (rider.type && rider.type !== 'Please Select') {
+    Object.keys(validationRules.riders).forEach(fieldName => {
+      if (fieldName === 'type') return; // Skip type as it's already validated
+
+      const { isValid: fieldValid, error } = validateField('riders', fieldName, rider[fieldName], rider);
+      if (!fieldValid) {
+        errors[fieldName] = error;
+        isValid = false;
+      }
+    });
+  }
 
   return { isValid, errors };
 };
@@ -135,10 +186,14 @@ export const validateAllRiders = (riders) => {
   return { isValid, errors };
 };
 
-// Update validateAllAdditionalCoverages to handle attempted fields
+// Update validateAllAdditionalCoverages to handle empty coverages
 export const validateAllAdditionalCoverages = (coverages, attemptedFields = {}) => {
   const errors = {};
   let isValid = true;
+
+  if (coverages.length === 0) {
+    return { isValid: true, errors: {} };
+  }
 
   coverages.forEach(coverage => {
     const coverageAttemptedFields = attemptedFields[coverage.id] || [];

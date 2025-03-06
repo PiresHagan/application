@@ -4,6 +4,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Layout from './layouts/layout';
 import { CssBaseline } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from './theme';
 
 import Counter from './pages/counter/counter';
 import Create from './pages/create';
@@ -12,7 +14,7 @@ import Login from './pages/Auth/login';
 
 function App() {
   return (
-    <>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <Layout>
         <Routes>
@@ -24,7 +26,7 @@ function App() {
         </Routes>
       </Layout>
       <ToastContainer />
-    </>
+    </ThemeProvider>
   );
 }
 

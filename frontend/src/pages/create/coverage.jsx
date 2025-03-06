@@ -16,8 +16,13 @@ import Riders from '../../components/coverage/Riders';
 import { validateSection, validateAllAdditionalCoverages, validateAllRiders } from '../../utils/coverageValidations';
 import { toast } from 'react-toastify';
 import { useGetDropdownValuesQuery, useGetFormOwnersQuery } from '../../slices/createApiSlice';
-import { setFormOwners } from '../../slices/formDataSlice';
 import { setCoverageOwners } from '../../slices/coverageOwnersSlice';
+import {
+  setProductData,
+  setBaseCoverageData,
+  setAdditionalCoverages,
+  setRiders
+} from '../../slices/coverageSlice';
 
 function Coverage({ applicationNumber }) {
   const dispatch = useDispatch();
@@ -25,6 +30,8 @@ function Coverage({ applicationNumber }) {
   const owners = useSelector(state => state.coverageOwners.owners);
   const { data: dropdownValues = {} } = useGetDropdownValuesQuery();
   const { data: formOwners, isLoading } = useGetFormOwnersQuery(applicationNumber);
+  const mainOwners = useSelector(state => state.owner.owners);
+  const coverageOwners = useSelector(state => state.coverageOwners.owners);
 
   // State for section management
   const [expandedSections, setExpandedSections] = useState({
@@ -46,52 +53,32 @@ function Coverage({ applicationNumber }) {
   });
   const [showErrors, setShowErrors] = useState(false);
 
-  // Product Selector State
-  const [productData, setProductData] = useState({
-    product: 'Whole Life',
-    plan: 'WL LifePay'
-  });
+  // Get data from Redux store
+  const storedProductData = useSelector(state => state.coverage.product);
+  const storedBaseCoverageData = useSelector(state => state.coverage.base);
+  const storedAdditionalCoverages = useSelector(state => state.coverage.additional);
+  const storedRiders = useSelector(state => state.coverage.riders);
 
-  // Base Coverage State
-  const [baseCoverageData, setBaseCoverageData] = useState({
-    coverageType: 'single',
-    insured1: '',
-    insured2: '',
-    sameAsOwner1: false,
-    sameAsOwner2: false,
-    relationship1: '',
-    relationship2: '',
-    faceAmount: '',
-    tableRating: '100%',
-    permanentFlatExtra: false,
-    permanentFlatExtraAmount: '0',
-    temporaryFlatExtra: false,
-    temporaryFlatExtraAmount: '0',
-    temporaryFlatExtraDuration: '1',
-    underwritingClass: 'Standard'
-  });
-
-  // Additional Coverage State
-  const [additionalCoverages, setAdditionalCoverages] = useState([{
-    id: 1,
-    coverageType: 'single',
-    coverage: '',
-    insured1: '',
-    faceAmount: '',
-    tableRating: '100%',
-    permanentFlatExtra: false,
-    permanentFlatExtraAmount: '0',
-    temporaryFlatExtra: false,
-    temporaryFlatExtraAmount: '0',
-    temporaryFlatExtraDuration: '1',
-    underwritingClass: 'Standard'
-  }]);
-
-  // Riders State
-  const [riders, setRiders] = useState([{
-    id: 1,
-    type: 'Please Select'
-  }]);
+  // Initialize state with stored values
+  const [productData, setProductDataState] = useState(storedProductData);
+  const [baseCoverageData, setBaseCoverageDataState] = useState(storedBaseCoverageData);
+  const [additionalCoverages, setAdditionalCoveragesState] = useState(
+    storedAdditionalCoverages.length > 0 ? storedAdditionalCoverages : [{
+      id: 1,
+      coverageType: 'single',
+      coverage: '',
+      insured1: '',
+      faceAmount: '',
+      tableRating: '100%',
+      permanentFlatExtra: false,
+      permanentFlatExtraAmount: '0',
+      temporaryFlatExtra: false,
+      temporaryFlatExtraAmount: '0',
+      temporaryFlatExtraDuration: '1',
+      underwritingClass: 'Standard'
+    }]
+  );
+  const [riders, setRidersState] = useState(storedRiders);
 
   // Add new state for tracking attempted fields
   const [attemptedFields, setAttemptedFields] = useState({
@@ -100,6 +87,27 @@ function Coverage({ applicationNumber }) {
   });
 
   const newCoverageRef = useRef(null);
+
+  // Update local state and Redux store
+  const handleProductDataChange = (newData) => {
+    setProductDataState(newData);
+    // dispatch(setProductData(newData));
+  };
+
+  const handleBaseCoverageDataChange = (newData) => {
+    setBaseCoverageDataState(newData);
+    // dispatch(setBaseCoverageData(newData));
+  };
+
+  const handleAdditionalCoveragesChange = (newData) => {
+    setAdditionalCoveragesState(newData);
+    // dispatch(setAdditionalCoverages(newData));
+  };
+
+  const handleRidersChange = (newData) => {
+    setRidersState(newData);
+    // dispatch(setRiders(newData));
+  };
 
   const handleAddCoverage = () => {
     const newId = Math.max(...additionalCoverages.map(c => c.id)) + 1;
@@ -119,7 +127,7 @@ function Coverage({ applicationNumber }) {
     };
 
     const updatedCoverages = [...additionalCoverages, newCoverage];
-    setAdditionalCoverages(updatedCoverages);
+    handleAdditionalCoveragesChange(updatedCoverages);
 
     // Validate with current attempted fields
     const { isValid: additionalValid, errors: additionalErrors } =
@@ -148,15 +156,50 @@ function Coverage({ applicationNumber }) {
   };
 
   const handleRemoveCoverage = (id) => {
-    setAdditionalCoverages(additionalCoverages.filter(coverage => coverage.id !== id));
+    const updatedCoverages = additionalCoverages.filter(coverage => coverage.id !== id);
+    handleAdditionalCoveragesChange(updatedCoverages);
+
+    // Validate the remaining coverages after removal
+    const { isValid: additionalValid, errors: additionalErrors } =
+      validateAllAdditionalCoverages(updatedCoverages, attemptedFields.additional);
+
+    setFormErrors(prev => ({
+      ...prev,
+      additional: additionalErrors
+    }));
+
+    setSectionValidation(prev => ({
+      ...prev,
+      additional: additionalValid
+    }));
+
+    // Also clean up the attempted fields for the removed coverage
+    setAttemptedFields(prev => {
+      const newAttempted = { ...prev.additional };
+      delete newAttempted[id];
+      return {
+        ...prev,
+        additional: newAttempted
+      };
+    });
   };
 
   const handleAddRider = () => {
-    const newId = Math.max(...riders.map(r => r.id)) + 1;
-    const updatedRiders = [...riders, { id: newId, type: 'Please Select' }];
-    setRiders(updatedRiders);
+    const newId = riders.length > 0 ? Math.max(...riders.map(r => r.id)) + 1 : 1;
+    const newRider = {
+      id: newId,
+      type: 'Please Select',
+      waiverType: '',
+      selectedPerson: '',
+      faceAmount: '',
+      rating: '',
+      returnOfPremiumType: ''
+    };
 
-    // Validate the updated riders
+    const updatedRiders = [...riders, newRider];
+    handleRidersChange(updatedRiders);
+
+    // Validate after adding
     const { isValid: ridersValid, errors: riderErrors } = validateAllRiders(updatedRiders);
     setFormErrors(prev => ({
       ...prev,
@@ -182,7 +225,29 @@ function Coverage({ applicationNumber }) {
   };
 
   const handleRemoveRider = (id) => {
-    setRiders(riders.filter(rider => rider.id !== id));
+    const updatedRiders = riders.filter(rider => rider.id !== id);
+    handleRidersChange(updatedRiders);
+
+    // Validate the remaining riders after removal
+    const { isValid: ridersValid, errors: riderErrors } = validateAllRiders(updatedRiders);
+    setFormErrors(prev => ({
+      ...prev,
+      riders: riderErrors
+    }));
+    setSectionValidation(prev => ({
+      ...prev,
+      riders: ridersValid
+    }));
+
+    // Clean up attempted fields for the removed rider
+    setAttemptedFields(prev => {
+      const newAttempted = { ...prev.riders };
+      delete newAttempted[id];
+      return {
+        ...prev,
+        riders: newAttempted
+      };
+    });
   };
 
   const handleDisabledSectionClick = (sectionName) => {
@@ -306,17 +371,16 @@ function Coverage({ applicationNumber }) {
   // Handle field changes with validation
   const handleFieldChange = (section, field, value) => {
     console.log('Field change:', { section, field, value });
-    let newData;
     switch (section) {
       case 'product':
-        newData = { ...productData, [field]: value };
-        setProductData(newData);
-        validateAndUpdateSection('product', newData);
+        const newProductData = { ...productData, [field]: value };
+        handleProductDataChange(newProductData);
+        validateAndUpdateSection('product', newProductData);
         break;
       case 'base':
-        newData = { ...baseCoverageData, [field]: value };
-        setBaseCoverageData(newData);
-        validateAndUpdateSection('base', newData);
+        const newBaseCoverageData = { ...baseCoverageData, [field]: value };
+        handleBaseCoverageDataChange(newBaseCoverageData);
+        validateAndUpdateSection('base', newBaseCoverageData);
         break;
       case 'additional':
         // Track the attempted field
@@ -334,7 +398,7 @@ function Coverage({ applicationNumber }) {
             ? { ...coverage, [field.name]: value }
             : coverage
         );
-        setAdditionalCoverages(updatedCoverages);
+        handleAdditionalCoveragesChange(updatedCoverages);
 
         // Validate with attempted fields
         const { isValid: additionalValid, errors: additionalErrors } =
@@ -349,14 +413,22 @@ function Coverage({ applicationNumber }) {
         }));
         break;
       case 'riders':
-        // Handle rider changes
+        // Update rider
         const updatedRiders = riders.map(rider =>
           rider.id === field.id
             ? { ...rider, [field.name]: value }
             : rider
         );
-        console.log('Updated riders:', updatedRiders);
-        setRiders(updatedRiders);
+        handleRidersChange(updatedRiders);
+
+        // Track attempted fields
+        setAttemptedFields(prev => ({
+          ...prev,
+          riders: {
+            ...prev.riders,
+            [field.id]: [...new Set([...(prev.riders[field.id] || []), field.name])]
+          }
+        }));
 
         // Validate after update
         const { isValid: ridersValid, errors: riderErrors } = validateAllRiders(updatedRiders);
@@ -372,10 +444,32 @@ function Coverage({ applicationNumber }) {
     }
   };
 
-  // Add useEffect to validate product section on initial load
+  // Add useEffect to validate sections on mount and when data changes
   useEffect(() => {
     validateAndUpdateSection('product', productData);
-  }, []); // Run once on component mount
+    validateAndUpdateSection('base', baseCoverageData);
+
+    const { isValid: additionalValid, errors: additionalErrors } =
+      validateAllAdditionalCoverages(additionalCoverages, {});
+    setFormErrors(prev => ({
+      ...prev,
+      additional: additionalErrors
+    }));
+    setSectionValidation(prev => ({
+      ...prev,
+      additional: additionalValid
+    }));
+
+    const { isValid: ridersValid, errors: riderErrors } = validateAllRiders(riders);
+    setFormErrors(prev => ({
+      ...prev,
+      riders: riderErrors
+    }));
+    setSectionValidation(prev => ({
+      ...prev,
+      riders: ridersValid
+    }));
+  }, [productData, baseCoverageData, additionalCoverages, riders]);
 
   // Handle save and continue
   const handleSaveAndContinue = () => {
@@ -397,13 +491,11 @@ function Coverage({ applicationNumber }) {
       return;
     }
 
-    // Proceed with save logic
     dispatch(nextStep());
   };
 
   useEffect(() => {
     if (formOwners) {
-      // Only update coverage owners, not the main owners
       dispatch(setCoverageOwners(formOwners.map(owner => ({
         clientGUID: owner.clientGUID,
         id: owner.id,
@@ -419,6 +511,13 @@ function Coverage({ applicationNumber }) {
       }))));
     }
   }, [formOwners, dispatch]);
+
+  // Add a function to get unique insureds (owners added in coverage page)
+  const getInsuredsList = () => {
+    return coverageOwners.filter(coverageOwner =>
+      !mainOwners.some(mainOwner => mainOwner.ssn === coverageOwner.ssn)
+    );
+  };
 
   return (
     <Box sx={{ pb: 3 }}>
@@ -440,7 +539,7 @@ function Coverage({ applicationNumber }) {
             <InputLabel>Product</InputLabel>
             <Select
               value={productData.product}
-              onChange={(e) => setProductData({ ...productData, product: e.target.value })}
+              onChange={(e) => setProductDataState({ ...productData, product: e.target.value })}
               label="Product"
             >
               <MenuItem value="Whole Life">Whole Life</MenuItem>
@@ -457,7 +556,7 @@ function Coverage({ applicationNumber }) {
               <InputLabel>Plan</InputLabel>
               <Select
                 value={productData.plan}
-                onChange={(e) => setProductData({ ...productData, plan: e.target.value })}
+                onChange={(e) => setProductDataState({ ...productData, plan: e.target.value })}
                 label="Plan"
               >
                 <MenuItem value="WL LifePay">WL LifePay</MenuItem>
@@ -486,7 +585,7 @@ function Coverage({ applicationNumber }) {
         <BaseCoverage
           data={baseCoverageData}
           onChange={(data) => {
-            setBaseCoverageData(data);
+            handleBaseCoverageDataChange(data);
             validateAndUpdateSection('base', data);
           }}
           errors={formErrors.base}
@@ -520,6 +619,9 @@ function Coverage({ applicationNumber }) {
           onRemove={handleRemoveCoverage}
           errors={formErrors.additional}
           showErrors={showErrors}
+          owners={owners}
+          dropdownValues={dropdownValues}
+          applicationNumber={applicationNumber}
         />
       </CollapsibleSection>
 
@@ -546,6 +648,8 @@ function Coverage({ applicationNumber }) {
           onRemove={handleRemoveRider}
           errors={formErrors.riders}
           showErrors={showErrors}
+          owners={mainOwners}
+          insureds={getInsuredsList()}
         />
       </CollapsibleSection>
 

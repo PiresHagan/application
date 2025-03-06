@@ -180,7 +180,7 @@ function Sidebar() {
   return (
     <Box
       sx={{
-        width: 45,
+        width: 55,
         height: '100vh',
         bgcolor: 'background.paper',
         borderRight: '1px solid',
@@ -216,7 +216,7 @@ function Sidebar() {
                 color: 'grey.500',
               }}
             >
-              <MenuIcon sx={{ fontSize: 20 }} />
+              <MenuIcon sx={{ fontSize: 24 }} />
             </ListItemIcon>
           </ListItemButton>
         </ListItem>
@@ -270,7 +270,7 @@ function Sidebar() {
                   justifyContent: 'center',
                   color: isMenuActive(item) ? 'primary.main' : 'grey.500',
                   '& .MuiSvgIcon-root': {
-                    fontSize: 20,
+                    fontSize: 24,
                   },
                 }}
               >
@@ -306,7 +306,7 @@ function Sidebar() {
                   justifyContent: 'center',
                   color: 'grey.500',
                   '& .MuiSvgIcon-root': {
-                    fontSize: 20,
+                    fontSize: 24,
                   },
                 }}
               >
