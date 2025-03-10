@@ -63,20 +63,7 @@ function Coverage({ applicationNumber }) {
   const [productData, setProductDataState] = useState(storedProductData);
   const [baseCoverageData, setBaseCoverageDataState] = useState(storedBaseCoverageData);
   const [additionalCoverages, setAdditionalCoveragesState] = useState(
-    storedAdditionalCoverages.length > 0 ? storedAdditionalCoverages : [{
-      id: 1,
-      coverageType: 'single',
-      coverage: '',
-      insured1: '',
-      faceAmount: '',
-      tableRating: '100%',
-      permanentFlatExtra: false,
-      permanentFlatExtraAmount: '0',
-      temporaryFlatExtra: false,
-      temporaryFlatExtraAmount: '0',
-      temporaryFlatExtraDuration: '1',
-      underwritingClass: 'Standard'
-    }]
+    storedAdditionalCoverages.length > 0 ? storedAdditionalCoverages : []
   );
   const [riders, setRidersState] = useState(storedRiders);
 
@@ -110,7 +97,11 @@ function Coverage({ applicationNumber }) {
   };
 
   const handleAddCoverage = () => {
-    const newId = Math.max(...additionalCoverages.map(c => c.id)) + 1;
+    // Handle case where there are no existing coverages
+    const newId = additionalCoverages.length > 0
+      ? Math.max(...additionalCoverages.map(c => c.id)) + 1
+      : 1;
+
     const newCoverage = {
       id: newId,
       coverageType: 'single',

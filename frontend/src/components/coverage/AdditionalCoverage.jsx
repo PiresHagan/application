@@ -295,7 +295,7 @@ function AdditionalCoverage({
                   ))}
                 </Select>
               </FormControl>
-              {coverages.length > 1 && (
+              {/* {coverages.length > 1 && ( */}
                 <IconButton
                   color="error"
                   onClick={() => onRemove(coverage.id)}
@@ -303,7 +303,7 @@ function AdditionalCoverage({
                 >
                   <DeleteIcon />
                 </IconButton>
-              )}
+              {/* )} */}
             </Box>
           </Box>
         );

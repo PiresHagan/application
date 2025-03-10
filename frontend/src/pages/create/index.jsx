@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Owner from './owner';
 import Coverage from './coverage';
+import Medical from './medical';
 import { Box, Button, Container, Step, StepLabel, Stepper, Typography } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { nextStep, previousStep } from '../../slices/stepSlice';
@@ -18,6 +19,8 @@ function Create() {
       case 1:
         return <Coverage applicationNumber={applicationNumber} />;
       case 2:
+        return <Medical applicationNumber={applicationNumber} />;
+      case 3:
         return <></>;
       default:
         return <div>Not Found</div>;

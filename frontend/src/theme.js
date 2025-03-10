@@ -38,12 +38,12 @@ const theme = createTheme({
             borderColor: '#ddd',
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#6246EA', 
+            borderColor: '#6246EA',
             borderWidth: '2px',
           },
         },
         notchedOutline: {
-          borderColor: '#eee',
+          borderColor: '#ccc',
         },
         input: {
           padding: '14px 14px',
