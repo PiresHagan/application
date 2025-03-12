@@ -16,6 +16,7 @@ public class OwnerSaveRequest {
     public static class OwnerDTO {
        // frapplicationform fields
        private LocalDate lastModifiedDate;
+       private String planGUID;
 
       
         // frclient fields

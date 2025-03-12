@@ -87,6 +87,7 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
         }));
       } else {
         // Save to backend and get clientGUID
+        console.log('Saving insured:', insuredData);
         const response = await saveInsured(insuredData).unwrap();
         console.log('Response:', response);
 
@@ -180,7 +181,7 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
             fullWidth
             error={showErrors && errors.insured1}
           >
-            <InputLabel>Insured 1</InputLabel>
+            <InputLabel>Please Select Insured</InputLabel>
             <Select
               value={data.insured1}
               onChange={(e) => {
@@ -194,7 +195,7 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
                   });
                 }
               }}
-              label="Insured 1"
+              label="Please Select Insured"
             >
               {owners
                 .filter(owner => owner.ownerType === '01')
@@ -243,7 +244,7 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
               error={showErrors && errors.insured2}
               disabled={!data.insured1}
             >
-              <InputLabel>Insured 2</InputLabel>
+              <InputLabel>Please Select Insured</InputLabel>
               <Select
                 value={data.insured2}
                 onChange={(e) => {
@@ -257,13 +258,13 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
                     });
                   }
                 }}
-                label="Insured 2"
+                label="Please Select Insured"
               >
                 {owners
                   .filter(owner => owner.ownerType === '01' && owner.id !== data.insured1)
                   .map(renderOwnerMenuItem)
                 }
-                <MenuItem value="add_new">Add New</MenuItem>
+                <MenuItem value="add_new">Add New Insured</MenuItem>
               </Select>
               {showErrors && errors.insured2 && (
                 <FormHelperText>{errors.insured2}</FormHelperText>

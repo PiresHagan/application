@@ -505,9 +505,32 @@ function Coverage({ applicationNumber }) {
 
   // Add a function to get unique insureds (owners added in coverage page)
   const getInsuredsList = () => {
-    return coverageOwners.filter(coverageOwner =>
-      !mainOwners.some(mainOwner => mainOwner.ssn === coverageOwner.ssn)
-    );
+    // Get all selected insureds from base coverage
+    const selectedInsureds = [];
+
+    // Add base coverage insureds if they exist
+    if (baseCoverageData.insured1) {
+      const insured1 = owners.find(owner => owner.id === baseCoverageData.insured1);
+      if (insured1) selectedInsureds.push(insured1);
+    }
+
+    if (baseCoverageData.insured2) {
+      const insured2 = owners.find(owner => owner.id === baseCoverageData.insured2);
+      if (insured2) selectedInsureds.push(insured2);
+    }
+
+    // Add all selected insureds from additional coverages
+    additionalCoverages.forEach(coverage => {
+      if (coverage.insured1) {
+        const insured = owners.find(owner => owner.id === coverage.insured1);
+        // Only add if not already in the array
+        if (insured && !selectedInsureds.some(selected => selected.id === insured.id)) {
+          selectedInsureds.push(insured);
+        }
+      }
+    });
+
+    return selectedInsureds;
   };
 
   return (
@@ -613,12 +636,13 @@ function Coverage({ applicationNumber }) {
           owners={owners}
           dropdownValues={dropdownValues}
           applicationNumber={applicationNumber}
+          baseCoverageData={baseCoverageData}
         />
       </CollapsibleSection>
 
       <CollapsibleSection
         title="Riders"
-        isEnabled={sectionValidation.additional}
+        isEnabled={sectionValidation.additional && sectionValidation.base}
         isExpanded={expandedSections['riders'] === 'section' || expandedSections['riders-section']}
         isValid={sectionValidation.riders}
         onExpand={handleSectionChange('riders', 'section')}

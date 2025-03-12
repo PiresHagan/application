@@ -27,15 +27,19 @@ public class OwnerService {
             String clientGUID = UUID.randomUUID().toString();
             String roleGUID = UUID.randomUUID().toString();
             String applicationFormGUID = UUID.randomUUID().toString();
+            // Generate a PlanGUID if not provided in the request
+            String planGUID = (owner.getPlanGUID() != null && !owner.getPlanGUID().isEmpty()) 
+                ? owner.getPlanGUID() : UUID.randomUUID().toString();
+            
             log.info("Saving owner: {}", owner);
 
-            // Insert into frapplicationform
+            // Insert into frapplicationform - updated to include PlanGUID
             jdbcTemplate.update("""
                 INSERT INTO frapplicationform (
-                    ApplicationFormGUID, ApplicationFormNumber, LastModifiedDate
-                ) VALUES (?, ?, ?)
+                    ApplicationFormGUID, ApplicationFormNumber, LastModifiedDate, PlanGUID
+                ) VALUES (?, ?, ?, ?)
                 """,
-                applicationFormGUID, applicationFormNumber, LocalDate.now()
+                applicationFormGUID, applicationFormNumber, LocalDate.now(), planGUID
             );
             
             // Insert into frclient

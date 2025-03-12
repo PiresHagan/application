@@ -327,9 +327,6 @@ function Medical({ applicationNumber }) {
             <FormControlLabel value="Y" control={<Radio />} label="Yes" />
             <FormControlLabel value="N" control={<Radio />} label="No" />
           </RadioGroup>
-          <Typography variant="subtitle1" gutterBottom>
-            BMI (Some insurers may charge more for high BMI)
-          </Typography>
         </Grid>
       </Grid>
     </CollapsibleSection>
@@ -1151,7 +1148,7 @@ function Medical({ applicationNumber }) {
       expandedSections={expandedSections}
     >
       <Grid container spacing={2}>
-        <Grid item xs={12}>
+        <Grid item xs={6}>
           <Typography variant="subtitle1" gutterBottom>
             Do you hold a private or commercial pilot's license?
           </Typography>
@@ -1168,6 +1165,16 @@ function Medical({ applicationNumber }) {
 
         {formData[insuredId]?.pilotLicense?.hasPilotLicense === 'Y' && (
           <>
+          <Grid item xs={6}>
+            <TextField
+              label="How many hours do you fly per year?"
+              fullWidth
+              type="number"
+              value={formData[insuredId]?.pilotLicense?.flyingHours || '0'}
+              onChange={(e) => handleFieldChange(insuredId, 'pilotLicense', 'flyingHours', e.target.value)}
+              margin="normal"
+            />
+          </Grid>
             <Grid item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
                 Do you fly ultralight or experimental aircraft?
@@ -1181,17 +1188,6 @@ function Medical({ applicationNumber }) {
                 <FormControlLabel value="Y" control={<Radio />} label="Yes" />
                 <FormControlLabel value="N" control={<Radio />} label="No" />
               </RadioGroup>
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                label="How many hours do you fly per year?"
-                fullWidth
-                type="number"
-                value={formData[insuredId]?.pilotLicense?.flyingHours || ''}
-                onChange={(e) => handleFieldChange(insuredId, 'pilotLicense', 'flyingHours', e.target.value)}
-                margin="normal"
-              />
             </Grid>
           </>
         )}

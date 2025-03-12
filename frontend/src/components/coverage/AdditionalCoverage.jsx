@@ -31,7 +31,8 @@ function AdditionalCoverage({
   showErrors = false,
   owners = [],
   dropdownValues = {},
-  applicationNumber
+  applicationNumber,
+  baseCoverageData = {}
 }) {
   const dispatch = useDispatch();
   const [saveInsured] = useSaveInsuredMutation();
@@ -132,6 +133,19 @@ function AdditionalCoverage({
     return null;
   };
 
+  // Function to determine if an owner is already selected in another coverage
+  const isOwnerUsedElsewhere = (ownerId, currentCoverageId) => {
+    // Check if used in base coverage
+    if (baseCoverageData.insured1 === ownerId || baseCoverageData.insured2 === ownerId) {
+      return true;
+    }
+
+    // Check if used in other additional coverages
+    return coverages.some(coverage =>
+      coverage.id !== currentCoverageId && coverage.insured1 === ownerId
+    );
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {coverages.map((coverage, index) => {
@@ -176,7 +190,7 @@ function AdditionalCoverage({
                 fullWidth
                 error={showErrors && coverageErrors.insured1}
               >
-                <InputLabel>Insured 1</InputLabel>
+                <InputLabel>Please Select Insured</InputLabel>
                 <Select
                   value={coverage.insured1 || ''}
                   onChange={(e) => {
@@ -186,10 +200,13 @@ function AdditionalCoverage({
                       onChange('insured1', e.target.value, coverage.id);
                     }
                   }}
-                  label="Insured 1"
+                  label="Please Select Insured"
                 >
                   {owners
-                    .filter(owner => owner.ownerType === '01')
+                    .filter(owner =>
+                      owner.ownerType === '01' &&
+                      !isOwnerUsedElsewhere(owner.id, coverage.id)
+                    )
                     .map(owner => renderOwnerMenuItem(owner, coverage.id))
                   }
                   <MenuItem value="add_new">Add New Insured</MenuItem>
@@ -296,13 +313,13 @@ function AdditionalCoverage({
                 </Select>
               </FormControl>
               {/* {coverages.length > 1 && ( */}
-                <IconButton
-                  color="error"
-                  onClick={() => onRemove(coverage.id)}
-                  sx={{ ml: 1 }}
-                >
-                  <DeleteIcon />
-                </IconButton>
+              <IconButton
+                color="error"
+                onClick={() => onRemove(coverage.id)}
+                sx={{ ml: 1 }}
+              >
+                <DeleteIcon />
+              </IconButton>
               {/* )} */}
             </Box>
           </Box>
