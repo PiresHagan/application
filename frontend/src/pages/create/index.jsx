@@ -2,24 +2,33 @@ import React, { useEffect, useState } from 'react';
 import Owner from './owner';
 import Coverage from './coverage';
 import Medical from './medical';
-import { Box, Button, Container, Step, StepLabel, Stepper, Typography } from '@mui/material';
+import { Box, Button, Container, Step, StepLabel, Stepper, Typography, Tooltip } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { nextStep, previousStep } from '../../slices/stepSlice';
-
-
+import { nextStep, previousStep, setActiveStep, setStepValid } from '../../slices/stepSlice';
+import { toast } from 'react-toastify';
 
 function Create() {
   const dispatch = useDispatch();
   const activeStep = useSelector((state) => state.step.activeStep);
+  const stepValidation = useSelector((state) => state.step.stepValidation);
 
   function _renderStepContent(step) {
     switch (step) {
       case 0:
-        return <Owner applicationNumber={applicationNumber} />;
+        return <Owner
+          applicationNumber={applicationNumber}
+          onStepComplete={(isComplete) => handleStepCompletion(0, isComplete)}
+        />;
       case 1:
-        return <Coverage applicationNumber={applicationNumber} />;
+        return <Coverage
+          applicationNumber={applicationNumber}
+          onStepComplete={(isComplete) => handleStepCompletion(1, isComplete)}
+        />;
       case 2:
-        return <Medical applicationNumber={applicationNumber} />;
+        return <Medical
+          applicationNumber={applicationNumber}
+          onStepComplete={(isComplete) => handleStepCompletion(2, isComplete)}
+        />;
       case 3:
         return <></>;
       default:
@@ -27,12 +36,47 @@ function Create() {
     }
   }
 
+  const handleStepCompletion = (step, isValid) => {
+    if (step === activeStep || (isValid && !stepValidation[step])) {
+      dispatch(setStepValid({ step, isValid }));
+    }
+  };
+
+  const validateCurrentStep = () => {
+    return stepValidation[activeStep];
+  };
+
   const handleNext = () => {
-    dispatch(nextStep());
+    const isCurrentStepValid = validateCurrentStep();
+
+    if (isCurrentStepValid) {
+      if (!stepValidation[activeStep]) {
+        dispatch(setStepValid({ step: activeStep, isValid: true }));
+      }
+      dispatch(nextStep());
+    } else {
+      toast.error('Please complete all required fields in the current step before proceeding.');
+    }
   };
 
   const handleBack = () => {
     dispatch(previousStep());
+  };
+
+  const handleStepClick = (step) => {
+    if (step > activeStep) {
+      if (!stepValidation[activeStep]) {
+        toast.error("Please complete all required fields in the current step before proceeding.");
+        return;
+      }
+
+      if (step > activeStep + 1) {
+        toast.error("Please complete steps in order.");
+        return;
+      }
+    }
+
+    dispatch(setActiveStep(step));
   };
 
   useEffect(() => {
@@ -54,6 +98,23 @@ function Create() {
     'Review & Declaration',
     'Submission & Confirmation'
   ];
+
+  // Helper function to get tooltip text based on step status
+  const getTooltipText = (index) => {
+    if (index === activeStep) {
+      return stepValidation[index]
+        ? "Current step (completed)"
+        : "Current step";
+    } else if (index < activeStep || stepValidation[index]) {
+      return "Click to return to this completed step";
+    } else if (index === activeStep + 1) {
+      return stepValidation[activeStep]
+        ? "Click to advance to this step"
+        : "Complete current step to unlock";
+    } else {
+      return "Complete previous steps first";
+    }
+  };
 
   return (
     <Box>
@@ -97,49 +158,44 @@ function Create() {
               '& .MuiStepIcon-root.Mui-completed': {
                 color: '#6246EA',
               },
-              mb: 6
+              mb: 3
             }}
           >
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
+            {steps.map((label, index) => (
+              <Tooltip
+                key={label}
+                title={getTooltipText(index)}
+                placement="top"
+                arrow
+              >
+                <Step
+                  completed={activeStep > index || stepValidation[index]}
+                  sx={{
+                    cursor: 'pointer',
+                    padding: '8px'
+                  }}
+                  onClick={() => handleStepClick(index)}
+                >
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              </Tooltip>
             ))}
           </Stepper>
-        </Box>
-        {_renderStepContent(activeStep)}
-        {/* <Box sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          gap: 2,
-          mt: 3,
-          '@media (max-width: 600px)': {
-            flexDirection: 'column',
-          }
-        }}>
-          <Button
-            variant="contained"
-            color="inherit"
-            onClick={handleBack}
-            disabled={activeStep === 0}
+
+          <Typography
+            variant="caption"
+            align="center"
             sx={{
-              bgcolor: 'grey.500',
-              '&:hover': {
-                bgcolor: 'grey.600',
-              }
+              display: 'block',
+              mb: 6,
+              color: 'text.secondary',
+              fontStyle: 'italic'
             }}
           >
-            Back Step
-          </Button>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleNext}
-            >
-              Next Step
-            </Button>
-          </Box>
-        </Box> */}
+            Tip: Complete each step to unlock the next one. Completed steps stay checked even when you navigate back.
+          </Typography>
+        </Box>
+        {_renderStepContent(activeStep)}
       </Container>
     </Box>
   );

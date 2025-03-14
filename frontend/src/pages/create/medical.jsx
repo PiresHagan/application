@@ -31,7 +31,7 @@ function a11yProps(index) {
   };
 }
 
-function Medical({ applicationNumber }) {
+function Medical({ applicationNumber, onStepComplete }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -45,6 +45,8 @@ function Medical({ applicationNumber }) {
   const [expandedSections, setExpandedSections] = useState({});
   const [formData, setFormData] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
+  const [sectionValidation, setSectionValidation] = useState({});
+  const [hasErrors, setHasErrors] = useState(false);
 
   // Initialize form data with existing medical data or create fresh data
   useEffect(() => {
@@ -163,7 +165,6 @@ function Medical({ applicationNumber }) {
       });
       setFormData(initialData);
 
-      // Set first section expanded by default for each insured
       const initialExpandedState = {};
       insureds.forEach(insured => {
         initialExpandedState[`${insured.id}-heightWeight`] = true;
@@ -171,7 +172,6 @@ function Medical({ applicationNumber }) {
       setExpandedSections(initialExpandedState);
     }
 
-    // Scroll to the first section after initialization
     if (insureds.length > 0) {
       const currentInsured = insureds[activeTab];
       if (currentInsured) {
@@ -185,6 +185,20 @@ function Medical({ applicationNumber }) {
       }
     }
   }, [insureds, medicalData, activeTab]);
+
+  useEffect(() => {
+    const isValid = (
+      Object.keys(sectionValidation).every(insuredId => {
+        return Object.values(sectionValidation[insuredId] || {}).every(valid => valid === true);
+      }) &&
+      !hasErrors
+    );
+
+    if (onStepComplete) {
+      onStepComplete(isValid);
+    }
+
+  }, [sectionValidation, hasErrors, onStepComplete]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -209,7 +223,6 @@ function Medical({ applicationNumber }) {
 
     setExpandedSections(newExpandedState);
 
-    // If the section is being expanded, scroll to it
     if (!expandedSections[`${insuredId}-${sectionName}`]) {
       setTimeout(() => {
         const sectionId = `section-${insuredId}-${sectionName}`;
@@ -217,7 +230,7 @@ function Medical({ applicationNumber }) {
         if (sectionElement) {
           sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }, 100); // Small delay to ensure DOM is updated
+      }, 100);
     }
   };
 
@@ -233,7 +246,6 @@ function Medical({ applicationNumber }) {
       }
     }));
 
-    // Clear related fields when parent field changes
     if (field === 'usesTobacco' && value === 'N') {
       setFormData(prevData => ({
         ...prevData,
@@ -251,17 +263,12 @@ function Medical({ applicationNumber }) {
       }));
     }
 
-    // Handle other conditional field clearing logic
-    // ...
   };
 
   const handleNext = () => {
     if (activeTab < insureds.length - 1) {
-      // Move to next insured's tab
       setActiveTab(activeTab + 1);
     } else {
-      // Move to next step in the application
-      // Save data to Redux
       dispatch(saveMedicalData(formData));
       dispatch(nextStep());
     }
@@ -269,17 +276,13 @@ function Medical({ applicationNumber }) {
 
   const handleBack = () => {
     if (activeTab > 0) {
-      // Move to previous insured's tab
       setActiveTab(activeTab - 1);
     } else {
-      // Move to previous step in the application
       dispatch(previousStep());
     }
   };
 
   const validateForm = (insuredId) => {
-    // Implement validation logic here
-    // Return true if valid, false if invalid
     return true;
   };
 
@@ -1165,16 +1168,16 @@ function Medical({ applicationNumber }) {
 
         {formData[insuredId]?.pilotLicense?.hasPilotLicense === 'Y' && (
           <>
-          <Grid item xs={6}>
-            <TextField
-              label="How many hours do you fly per year?"
-              fullWidth
-              type="number"
-              value={formData[insuredId]?.pilotLicense?.flyingHours || '0'}
-              onChange={(e) => handleFieldChange(insuredId, 'pilotLicense', 'flyingHours', e.target.value)}
-              margin="normal"
-            />
-          </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="How many hours do you fly per year?"
+                fullWidth
+                type="number"
+                value={formData[insuredId]?.pilotLicense?.flyingHours || '0'}
+                onChange={(e) => handleFieldChange(insuredId, 'pilotLicense', 'flyingHours', e.target.value)}
+                margin="normal"
+              />
+            </Grid>
             <Grid item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
                 Do you fly ultralight or experimental aircraft?

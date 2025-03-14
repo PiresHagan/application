@@ -35,7 +35,11 @@ public class SecurityConfig {
         "/api/owners",
         "/api/insured",
         "/api/insured/{clientGUID}",
-        "/api/form/{formNumber}/owners"
+        "/api/form/{formNumber}/owners",
+        "/api/products/company/{companyName}",
+        "/api/products/{productGUID}/plans",
+        "/api/products/application/{applicationNumber}/plan",
+        "/api/coverage/base/{applicationNumber}"
     };
 
     @Bean

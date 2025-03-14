@@ -251,7 +251,16 @@ function AdditionalCoverage({
                 control={
                   <Checkbox
                     checked={coverage.permanentFlatExtra}
-                    onChange={(e) => handleCoverageChange(coverage.id, 'permanentFlatExtra', e.target.checked)}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      const updates = {
+                        id: coverage.id,
+                        updates: {
+                          permanentFlatExtra: isChecked
+                        }
+                      };
+                      onChange('_multipleFields', updates, coverage.id);
+                    }}
                   />
                 }
                 label="Add Permanent Flat Extra"
@@ -274,7 +283,17 @@ function AdditionalCoverage({
                 control={
                   <Checkbox
                     checked={coverage.temporaryFlatExtra}
-                    onChange={(e) => handleCoverageChange(coverage.id, 'temporaryFlatExtra', e.target.checked)}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      const updates = {
+                        id: coverage.id,
+                        updates: {
+                          temporaryFlatExtra: isChecked,
+                          temporaryFlatExtraDuration: isChecked ? '1' : '0'
+                        }
+                      };
+                      onChange('_multipleFields', updates, coverage.id);
+                    }}
                   />
                 }
                 label="Add Temporary Flat Extra"

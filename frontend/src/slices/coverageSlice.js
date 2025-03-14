@@ -3,7 +3,9 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   product: {
     product: 'Whole Life',
-    plan: 'WL LifePay'
+    plan: 'WL LifePay',
+    productGUID: '',
+    planGUID: ''
   },
   base: {
     coverageType: 'single',
@@ -13,13 +15,13 @@ const initialState = {
     sameAsOwner2: false,
     relationship1: '',
     relationship2: '',
-    faceAmount: '',
+    faceAmount: '100000',
     tableRating: '100%',
     permanentFlatExtra: false,
     permanentFlatExtraAmount: '0',
     temporaryFlatExtra: false,
     temporaryFlatExtraAmount: '0',
-    temporaryFlatExtraDuration: '1',
+    temporaryFlatExtraDuration: '0',
     underwritingClass: 'Standard'
   },
   additional: [],

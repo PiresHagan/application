@@ -359,7 +359,11 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
           control={
             <Checkbox
               checked={data.temporaryFlatExtra}
-              onChange={(e) => onChange({ ...data, temporaryFlatExtra: e.target.checked })}
+              onChange={(e) => onChange({
+                ...data,
+                temporaryFlatExtra: e.target.checked,
+                temporaryFlatExtraDuration: e.target.checked ? '1' : '0'
+              })}
             />
           }
           label="Add Temporary Flat Extra"

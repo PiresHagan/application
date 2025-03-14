@@ -8,14 +8,16 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Grid,
 } from '@mui/material';
 import CollapsibleSection from '../../components/common/CollapsibleSection';
 import BaseCoverage from '../../components/coverage/BaseCoverage';
 import AdditionalCoverage from '../../components/coverage/AdditionalCoverage';
 import Riders from '../../components/coverage/Riders';
+import PremiumSection from '../../components/coverage/PremiumSection';
 import { validateSection, validateAllAdditionalCoverages, validateAllRiders } from '../../utils/coverageValidations';
 import { toast } from 'react-toastify';
-import { useGetDropdownValuesQuery, useGetFormOwnersQuery } from '../../slices/createApiSlice';
+import { useGetDropdownValuesQuery, useGetFormOwnersQuery, useGetCompanyProductsQuery, useGetProductPlansQuery, useUpdateApplicationPlanMutation, useSaveBaseCoverageMutation } from '../../slices/createApiSlice';
 import { setCoverageOwners } from '../../slices/coverageOwnersSlice';
 import {
   setProductData,
@@ -24,7 +26,7 @@ import {
   setRiders
 } from '../../slices/coverageSlice';
 
-function Coverage({ applicationNumber }) {
+function Coverage({ applicationNumber, onStepComplete }) {
   const dispatch = useDispatch();
   const activeStep = useSelector((state) => state.step.activeStep);
   const owners = useSelector(state => state.coverageOwners.owners);
@@ -75,6 +77,15 @@ function Coverage({ applicationNumber }) {
 
   const newCoverageRef = useRef(null);
 
+  // Add new queries for products and plans
+  const { data: companyProducts = [] } = useGetCompanyProductsQuery('DEV Insurance');
+  const { data: productPlans = [], refetch: refetchPlans } = useGetProductPlansQuery(
+    productData.productGUID || '',
+    { skip: !productData.productGUID }
+  );
+  const [updateApplicationPlan] = useUpdateApplicationPlanMutation();
+  const [saveBaseCoverage] = useSaveBaseCoverageMutation();
+
   // Update local state and Redux store
   const handleProductDataChange = (newData) => {
     setProductDataState(newData);
@@ -105,15 +116,15 @@ function Coverage({ applicationNumber }) {
     const newCoverage = {
       id: newId,
       coverageType: 'single',
-      coverage: '',
+      coverage: 'Term 10',
       insured1: '',
-      faceAmount: '',
+      faceAmount: '100000',
       tableRating: '100%',
       permanentFlatExtra: false,
       permanentFlatExtraAmount: '0',
       temporaryFlatExtra: false,
       temporaryFlatExtraAmount: '0',
-      temporaryFlatExtraDuration: '1',
+      temporaryFlatExtraDuration: '0',
       underwritingClass: 'Standard'
     };
 
@@ -164,7 +175,6 @@ function Coverage({ applicationNumber }) {
       additional: additionalValid
     }));
 
-    // Also clean up the attempted fields for the removed coverage
     setAttemptedFields(prev => {
       const newAttempted = { ...prev.additional };
       delete newAttempted[id];
@@ -294,7 +304,6 @@ function Coverage({ applicationNumber }) {
 
   // Handle section expansion
   const handleSectionChange = (sectionId, sectionName) => () => {
-    // If section is already expanded, collapse it
     if (expandedSections[sectionId] === sectionName) {
       setExpandedSections(prev => ({
         ...prev,
@@ -344,7 +353,6 @@ function Coverage({ applicationNumber }) {
       }
     }
 
-    // If all previous sections are valid, expand the current section
     setExpandedSections(prev => ({
       ...prev,
       [sectionId]: sectionName,
@@ -359,7 +367,6 @@ function Coverage({ applicationNumber }) {
     }, 200);
   };
 
-  // Handle field changes with validation
   const handleFieldChange = (section, field, value) => {
     console.log('Field change:', { section, field, value });
     switch (section) {
@@ -374,7 +381,38 @@ function Coverage({ applicationNumber }) {
         validateAndUpdateSection('base', newBaseCoverageData);
         break;
       case 'additional':
-        // Track the attempted field
+        if (field.name === '_multipleFields') {
+          const { id, updates } = value;
+
+          const fieldNames = Object.keys(updates);
+          setAttemptedFields(prev => ({
+            ...prev,
+            additional: {
+              ...prev.additional,
+              [id]: [...new Set([...(prev.additional[id] || []), ...fieldNames])]
+            }
+          }));
+
+          const updatedCoverages = additionalCoverages.map(coverage =>
+            coverage.id === id
+              ? { ...coverage, ...updates }
+              : coverage
+          );
+          handleAdditionalCoveragesChange(updatedCoverages);
+
+          const { isValid: additionalValid, errors: additionalErrors } =
+            validateAllAdditionalCoverages(updatedCoverages, attemptedFields.additional);
+          setFormErrors(prev => ({
+            ...prev,
+            additional: additionalErrors
+          }));
+          setSectionValidation(prev => ({
+            ...prev,
+            additional: additionalValid
+          }));
+          break;
+        }
+
         setAttemptedFields(prev => ({
           ...prev,
           additional: {
@@ -383,7 +421,6 @@ function Coverage({ applicationNumber }) {
           }
         }));
 
-        // Update coverage
         const updatedCoverages = additionalCoverages.map(coverage =>
           coverage.id === field.id
             ? { ...coverage, [field.name]: value }
@@ -391,7 +428,6 @@ function Coverage({ applicationNumber }) {
         );
         handleAdditionalCoveragesChange(updatedCoverages);
 
-        // Validate with attempted fields
         const { isValid: additionalValid, errors: additionalErrors } =
           validateAllAdditionalCoverages(updatedCoverages, attemptedFields.additional);
         setFormErrors(prev => ({
@@ -404,7 +440,6 @@ function Coverage({ applicationNumber }) {
         }));
         break;
       case 'riders':
-        // Update rider
         const updatedRiders = riders.map(rider =>
           rider.id === field.id
             ? { ...rider, [field.name]: value }
@@ -412,7 +447,6 @@ function Coverage({ applicationNumber }) {
         );
         handleRidersChange(updatedRiders);
 
-        // Track attempted fields
         setAttemptedFields(prev => ({
           ...prev,
           riders: {
@@ -421,7 +455,6 @@ function Coverage({ applicationNumber }) {
           }
         }));
 
-        // Validate after update
         const { isValid: ridersValid, errors: riderErrors } = validateAllRiders(updatedRiders);
         setFormErrors(prev => ({
           ...prev,
@@ -435,7 +468,6 @@ function Coverage({ applicationNumber }) {
     }
   };
 
-  // Add useEffect to validate sections on mount and when data changes
   useEffect(() => {
     validateAndUpdateSection('product', productData);
     validateAndUpdateSection('base', baseCoverageData);
@@ -462,11 +494,33 @@ function Coverage({ applicationNumber }) {
     }));
   }, [productData, baseCoverageData, additionalCoverages, riders]);
 
-  // Handle save and continue
-  const handleSaveAndContinue = () => {
+  useEffect(() => {
+    if (owners.length > 0 && (!baseCoverageData.insured1 || (!baseCoverageData.insured2 && baseCoverageData.coverageType === 'joint'))) {
+      const individualOwners = owners.filter(owner => owner.ownerType === '01');
+
+      if (individualOwners.length > 0) {
+        const updatedData = { ...baseCoverageData };
+
+        if (!updatedData.insured1 && individualOwners[0]) {
+          updatedData.insured1 = individualOwners[0].id;
+        }
+
+        if (updatedData.coverageType === 'joint' && !updatedData.insured2 && individualOwners.length > 1) {
+          updatedData.insured2 = individualOwners[1].id;
+        }
+
+        if (updatedData.insured1 !== baseCoverageData.insured1 ||
+          updatedData.insured2 !== baseCoverageData.insured2) {
+          handleBaseCoverageDataChange(updatedData);
+          validateAndUpdateSection('base', updatedData);
+        }
+      }
+    }
+  }, [owners, baseCoverageData, handleBaseCoverageDataChange, validateAndUpdateSection]);
+
+  const handleSaveAndContinue = async () => {
     setShowErrors(true);
 
-    // When saving, validate all fields by passing empty attemptedFields
     const { isValid: additionalValid, errors: additionalErrors } =
       validateAllAdditionalCoverages(additionalCoverages, {});
     const { isValid: ridersValid, errors: riderErrors } = validateAllRiders(riders);
@@ -482,7 +536,24 @@ function Coverage({ applicationNumber }) {
       return;
     }
 
-    dispatch(nextStep());
+    try {
+      if (productData.planGUID) {
+        await updateApplicationPlan({
+          applicationNumber,
+          planGUID: productData.planGUID
+        }).unwrap();
+      }
+      console.log(baseCoverageData);
+      await saveBaseCoverage({
+        applicationNumber,
+        coverageData: { ...baseCoverageData, planGUID: productData.planGUID }
+      }).unwrap();
+
+      dispatch(nextStep());
+    } catch (error) {
+      console.error('Error saving data:', error);
+      toast.error('Error saving coverage information. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -503,12 +574,9 @@ function Coverage({ applicationNumber }) {
     }
   }, [formOwners, dispatch]);
 
-  // Add a function to get unique insureds (owners added in coverage page)
   const getInsuredsList = () => {
-    // Get all selected insureds from base coverage
     const selectedInsureds = [];
 
-    // Add base coverage insureds if they exist
     if (baseCoverageData.insured1) {
       const insured1 = owners.find(owner => owner.id === baseCoverageData.insured1);
       if (insured1) selectedInsureds.push(insured1);
@@ -519,11 +587,9 @@ function Coverage({ applicationNumber }) {
       if (insured2) selectedInsureds.push(insured2);
     }
 
-    // Add all selected insureds from additional coverages
     additionalCoverages.forEach(coverage => {
       if (coverage.insured1) {
         const insured = owners.find(owner => owner.id === coverage.insured1);
-        // Only add if not already in the array
         if (insured && !selectedInsureds.some(selected => selected.id === insured.id)) {
           selectedInsureds.push(insured);
         }
@@ -533,156 +599,218 @@ function Coverage({ applicationNumber }) {
     return selectedInsureds;
   };
 
+  useEffect(() => {
+    if (companyProducts.length > 0 && productData.product) {
+      const selectedProduct = companyProducts.find(p => p.ProductName === productData.product);
+      if (selectedProduct) {
+        setProductDataState(prev => ({
+          ...prev,
+          productGUID: selectedProduct.ProductGUID,
+          planGUID: ''
+        }));
+      }
+    }
+  }, [companyProducts, productData.product]);
+
+  useEffect(() => {
+    if (productData.productGUID) {
+      refetchPlans();
+    }
+  }, [productData.productGUID, refetchPlans]);
+
+  useEffect(() => {
+    const isAllValid =
+      sectionValidation.product &&
+      sectionValidation.base &&
+      sectionValidation.additional &&
+      sectionValidation.riders;
+
+    if (onStepComplete) {
+      onStepComplete(isAllValid);
+    }
+
+  }, [sectionValidation, onStepComplete]);
+
   return (
     <Box sx={{ pb: 3 }}>
-      <CollapsibleSection
-        title="Product Selector"
-        isEnabled={true}
-        isExpanded={expandedSections['product'] === 'selector' || expandedSections['product-selector']}
-        isValid={sectionValidation.product}
-        onExpand={handleSectionChange('product', 'selector')}
-        onDisabledClick={() => handleDisabledSectionClick('product')}
-        sectionName="selector"
-        ownerId="product"
-        expandedSections={expandedSections}
-        errors={formErrors.product}
-        showErrors={showErrors}
-      >
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel>Product</InputLabel>
-            <Select
-              value={productData.product}
-              onChange={(e) => setProductDataState({ ...productData, product: e.target.value })}
-              label="Product"
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8.4}> 
+          <CollapsibleSection
+            title="Product Selector"
+            isEnabled={true}
+            isExpanded={expandedSections['product'] === 'selector' || expandedSections['product-selector']}
+            isValid={sectionValidation.product}
+            onExpand={handleSectionChange('product', 'selector')}
+            onDisabledClick={() => handleDisabledSectionClick('product')}
+            sectionName="selector"
+            ownerId="product"
+            expandedSections={expandedSections}
+            errors={formErrors.product}
+            showErrors={showErrors}
+          >
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Product</InputLabel>
+                <Select
+                  value={productData.product}
+                  onChange={(e) => setProductDataState({ ...productData, product: e.target.value, plan: '' })}
+                  label="Product"
+                >
+                  {companyProducts.map(product => (
+                    <MenuItem key={product.ProductGUID} value={product.ProductName}>
+                      {product.ProductName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {productData.product && (
+                <FormControl fullWidth>
+                  <InputLabel>Plan</InputLabel>
+                  <Select
+                    value={productData.plan}
+                    onChange={(e) => {
+                      const selectedPlan = productPlans.find(p => p.PlanName === e.target.value);
+                      setProductDataState({
+                        ...productData,
+                        plan: e.target.value,
+                        planGUID: selectedPlan ? selectedPlan.PlanGUID : ''
+                      });
+                    }}
+                    label="Plan"
+                  >
+                    {productPlans.map(plan => (
+                      <MenuItem key={plan.PlanGUID} value={plan.PlanName}>
+                        {plan.PlanName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Base Coverage"
+            isEnabled={sectionValidation.product}
+            isExpanded={expandedSections['base'] === 'coverage' || expandedSections['base-coverage']}
+            isValid={sectionValidation.base}
+            onExpand={handleSectionChange('base', 'coverage')}
+            onDisabledClick={() => handleDisabledSectionClick('base')}
+            sectionName="coverage"
+            ownerId="base"
+            expandedSections={expandedSections}
+            errors={formErrors.base}
+            showErrors={showErrors}
+          >
+            <BaseCoverage
+              data={baseCoverageData}
+              onChange={(data) => {
+                if (baseCoverageData.coverageType === 'joint' && data.coverageType === 'single') {
+                  data.insured2 = '';
+                }
+
+                if (baseCoverageData.coverageType === 'single' && data.coverageType === 'joint') {
+                  const individualOwners = owners.filter(owner =>
+                    owner.ownerType === '01' && owner.id !== data.insured1
+                  );
+                  if (individualOwners.length > 0) {
+                    data.insured2 = individualOwners[0].id;
+                  }
+                }
+
+                handleBaseCoverageDataChange(data);
+                validateAndUpdateSection('base', data);
+              }}
+              errors={formErrors.base}
+              showErrors={showErrors}
+              owners={owners}
+              dropdownValues={dropdownValues}
+              applicationNumber={applicationNumber}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Additional Coverage(s)"
+            isEnabled={sectionValidation.base}
+            isExpanded={expandedSections['additional'] === 'coverage' || expandedSections['additional-coverage']}
+            isValid={sectionValidation.additional}
+            onExpand={handleSectionChange('additional', 'coverage')}
+            onDisabledClick={() => handleDisabledSectionClick('additional')}
+            sectionName="coverage"
+            ownerId="additional"
+            expandedSections={expandedSections}
+            errors={formErrors.additional}
+            showErrors={showErrors}
+          >
+            <AdditionalCoverage
+              coverages={additionalCoverages}
+              onChange={(fieldName, value, coverageId) => {
+                console.log('Additional coverage change:', { fieldName, value, coverageId });
+                handleFieldChange('additional', { id: coverageId, name: fieldName }, value);
+              }}
+              onAdd={handleAddCoverage}
+              onRemove={handleRemoveCoverage}
+              errors={formErrors.additional}
+              showErrors={showErrors}
+              owners={owners}
+              dropdownValues={dropdownValues}
+              applicationNumber={applicationNumber}
+              baseCoverageData={baseCoverageData}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Riders"
+            isEnabled={sectionValidation.additional && sectionValidation.base}
+            isExpanded={expandedSections['riders'] === 'section' || expandedSections['riders-section']}
+            isValid={sectionValidation.riders}
+            onExpand={handleSectionChange('riders', 'section')}
+            onDisabledClick={() => handleDisabledSectionClick('riders')}
+            sectionName="section"
+            ownerId="riders"
+            expandedSections={expandedSections}
+            errors={formErrors.riders}
+            showErrors={showErrors}
+          >
+            <Riders
+              riders={riders}
+              onChange={(fieldName, value, riderId) => {
+                console.log('Rider change:', { fieldName, value, riderId });
+                handleFieldChange('riders', { id: riderId, name: fieldName }, value);
+              }}
+              onAdd={handleAddRider}
+              onRemove={handleRemoveRider}
+              errors={formErrors.riders}
+              showErrors={showErrors}
+              owners={mainOwners}
+              insureds={getInsuredsList()}
+            />
+          </CollapsibleSection>
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+            <Button
+              variant="contained"
+              color="inherit"
+              onClick={() => dispatch(previousStep())}
             >
-              <MenuItem value="Whole Life">Whole Life</MenuItem>
-              <MenuItem value="Term Life">Term Life</MenuItem>
-              <MenuItem value="Universal Life">Universal Life</MenuItem>
-              <MenuItem value="Critical Illness">Critical Illness</MenuItem>
-              <MenuItem value="Final Expense">Final Expense</MenuItem>
-              <MenuItem value="Annuities">Annuities</MenuItem>
-            </Select>
-          </FormControl>
+              Back Step
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSaveAndContinue}
+            >
+              Next Step
+            </Button>
+          </Box>
+        </Grid>
 
-          {productData.product === 'Whole Life' && (
-            <FormControl fullWidth>
-              <InputLabel>Plan</InputLabel>
-              <Select
-                value={productData.plan}
-                onChange={(e) => setProductDataState({ ...productData, plan: e.target.value })}
-                label="Plan"
-              >
-                <MenuItem value="WL LifePay">WL LifePay</MenuItem>
-                <MenuItem value="WL 10Pay">WL 10Pay</MenuItem>
-                <MenuItem value="WL 15Pay">WL 15Pay</MenuItem>
-                <MenuItem value="WL 20Pay">WL 20Pay</MenuItem>
-              </Select>
-            </FormControl>
-          )}
-        </Box>
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Base Coverage"
-        isEnabled={sectionValidation.product}
-        isExpanded={expandedSections['base'] === 'coverage' || expandedSections['base-coverage']}
-        isValid={sectionValidation.base}
-        onExpand={handleSectionChange('base', 'coverage')}
-        onDisabledClick={() => handleDisabledSectionClick('base')}
-        sectionName="coverage"
-        ownerId="base"
-        expandedSections={expandedSections}
-        errors={formErrors.base}
-        showErrors={showErrors}
-      >
-        <BaseCoverage
-          data={baseCoverageData}
-          onChange={(data) => {
-            handleBaseCoverageDataChange(data);
-            validateAndUpdateSection('base', data);
-          }}
-          errors={formErrors.base}
-          showErrors={showErrors}
-          owners={owners}
-          dropdownValues={dropdownValues}
-          applicationNumber={applicationNumber}
-        />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Additional Coverage(s)"
-        isEnabled={sectionValidation.base}
-        isExpanded={expandedSections['additional'] === 'coverage' || expandedSections['additional-coverage']}
-        isValid={sectionValidation.additional}
-        onExpand={handleSectionChange('additional', 'coverage')}
-        onDisabledClick={() => handleDisabledSectionClick('additional')}
-        sectionName="coverage"
-        ownerId="additional"
-        expandedSections={expandedSections}
-        errors={formErrors.additional}
-        showErrors={showErrors}
-      >
-        <AdditionalCoverage
-          coverages={additionalCoverages}
-          onChange={(fieldName, value, coverageId) => {
-            console.log('Additional coverage change:', { fieldName, value, coverageId });
-            handleFieldChange('additional', { id: coverageId, name: fieldName }, value);
-          }}
-          onAdd={handleAddCoverage}
-          onRemove={handleRemoveCoverage}
-          errors={formErrors.additional}
-          showErrors={showErrors}
-          owners={owners}
-          dropdownValues={dropdownValues}
-          applicationNumber={applicationNumber}
-          baseCoverageData={baseCoverageData}
-        />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Riders"
-        isEnabled={sectionValidation.additional && sectionValidation.base}
-        isExpanded={expandedSections['riders'] === 'section' || expandedSections['riders-section']}
-        isValid={sectionValidation.riders}
-        onExpand={handleSectionChange('riders', 'section')}
-        onDisabledClick={() => handleDisabledSectionClick('riders')}
-        sectionName="section"
-        ownerId="riders"
-        expandedSections={expandedSections}
-        errors={formErrors.riders}
-        showErrors={showErrors}
-      >
-        <Riders
-          riders={riders}
-          onChange={(fieldName, value, riderId) => {
-            console.log('Rider change:', { fieldName, value, riderId });
-            handleFieldChange('riders', { id: riderId, name: fieldName }, value);
-          }}
-          onAdd={handleAddRider}
-          onRemove={handleRemoveRider}
-          errors={formErrors.riders}
-          showErrors={showErrors}
-          owners={mainOwners}
-          insureds={getInsuredsList()}
-        />
-      </CollapsibleSection>
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-        <Button
-          variant="contained"
-          color="inherit"
-          onClick={() => dispatch(previousStep())}
-        >
-          Back Step
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSaveAndContinue}
-        >
-          Next Step
-        </Button>
-      </Box>
+        <Grid item xs={12} md={3.6} sx={{ position: 'relative' }}>
+          <Box sx={{ position: 'sticky', top: 16 }}>
+            <PremiumSection />
+          </Box>
+        </Grid>
+      </Grid>
     </Box>
   );
 }

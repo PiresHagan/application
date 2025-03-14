@@ -46,7 +46,7 @@ const getPreviousSection = (currentSection, ownerType) => {
   return currentIndex > 0 ? sectionsOrder[currentIndex - 1] : null;
 };
 
-function Owner(props) {
+function Owner({ applicationNumber, onStepComplete }) {
   const dispatch = useDispatch();
 
   const owners = useSelector(state => state.owner.owners);
@@ -301,7 +301,7 @@ function Owner(props) {
 
     try {
       const ownerRequest = {
-        applicationFormNumber: props.applicationNumber,
+        applicationFormNumber: applicationNumber,
         owners: owners.map(owner => ({
           typeCode: owner.ownerType,
           ...(owner.ownerType === '01' ? {
@@ -353,6 +353,7 @@ function Owner(props) {
       toast.error('Error saving owners: ' + error.message);
     }
   };
+
   const activeStep = useSelector((state) => state.step.activeStep);
 
   const { data: dropdownValuesData, isLoading: isLoadingDropdowns } = useGetDropdownValuesQuery();
@@ -363,6 +364,23 @@ function Owner(props) {
       setDropdownValues(dropdownValuesData);
     }
   }, [dropdownValuesData]);
+
+  useEffect(() => {
+    const isValid = owners.every(owner => {
+      const sectionsToValidate = owner.ownerType === '02'
+        ? ['ownerDetails', 'contact', 'address']
+        : ['ownerDetails', 'occupation', 'contact', 'address'];
+
+      return sectionsToValidate.every(section =>
+        sectionValidation[owner.id]?.[section] === true
+      );
+    });
+
+    if (onStepComplete) {
+      onStepComplete(isValid);
+    }
+
+  }, [owners, sectionValidation, onStepComplete]);
 
   return (
     <>
@@ -566,20 +584,20 @@ function Owner(props) {
               ADD OWNER
             </Button>
             <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              color="inherit"
-              onClick={handleBack}
-              disabled={activeStep === 0}
-              sx={{
-                bgcolor: 'grey.500',
-                '&:hover': {
-                  bgcolor: 'grey.600',
-                }
-              }}
-            >
-              Back Step
-            </Button>
+              <Button
+                variant="contained"
+                color="inherit"
+                onClick={handleBack}
+                disabled={activeStep === 0}
+                sx={{
+                  bgcolor: 'grey.500',
+                  '&:hover': {
+                    bgcolor: 'grey.600',
+                  }
+                }}
+              >
+                Back Step
+              </Button>
               <Button
                 variant="contained"
                 onClick={handleSaveAndContinue}
