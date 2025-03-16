@@ -23,7 +23,7 @@ public class CoverageService {
      */
     @Transactional
     public void saveBaseCoverage(Map<String, Object> baseCoverageData, String applicationNumber) {
-        log.info("Saving base coverage for application: {}", applicationNumber);
+        log.info("Saving base coverage for application: {}", baseCoverageData);
         
         // Get application form GUID
         String applicationFormGUID = getApplicationFormGUID(applicationNumber);
@@ -94,47 +94,97 @@ public class CoverageService {
     
     private void handleInsureds(Map<String, Object> baseCoverageData, String applicationFormGUID, String coverageGUID) {
         // Handle first insured
-        String insured1 = (String) baseCoverageData.get("insured1");
-        if (insured1 != null && !insured1.isEmpty()) {
-            String clientGUID = getClientGUIDForInsured(insured1);
-            if (clientGUID != null) {
-                insertRole(clientGUID, applicationFormGUID, coverageGUID);
+        Object insured1Obj = baseCoverageData.get("insured1");
+        Boolean insured1IsSameAsOwner = (Boolean) baseCoverageData.getOrDefault("insured1IsSameAsOwner", false);
+        
+        if (insured1Obj != null) {
+            // Convert insured ID to string regardless of whether it's an Integer or String
+            String insured1 = String.valueOf(insured1Obj);
+            
+            if (!insured1.isEmpty()) {
+                // Get client GUID (this method should be updated to directly get client GUID)
+                String clientGUID = getClientGUID(insured1);
+                
+                if (clientGUID != null) {
+                    // Insert role based on whether insured is same as owner or new
+                    if (Boolean.TRUE.equals(insured1IsSameAsOwner)) {
+                        // For owner-insureds, insert role with ApplicationFormGUID as null
+                        insertOwnerInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
+                        log.info("Insured 1 is same as owner, inserted role for ClientGUID: {}", clientGUID);
+                    } else {
+                        // For new insureds, insert role with ApplicationFormGUID value
+                        insertNewInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
+                        log.info("Insured 1 is a new insured, inserted role for ClientGUID: {}", clientGUID);
+                    }
+                }
             }
         }
         
         // Handle second insured if joint coverage
         if ("joint".equals(baseCoverageData.get("coverageType"))) {
-            String insured2 = (String) baseCoverageData.get("insured2");
-            if (insured2 != null && !insured2.isEmpty()) {
-                String clientGUID = getClientGUIDForInsured(insured2);
-                if (clientGUID != null) {
-                    insertRole(clientGUID, applicationFormGUID, coverageGUID);
+            Object insured2Obj = baseCoverageData.get("insured2");
+            Boolean insured2IsSameAsOwner = (Boolean) baseCoverageData.getOrDefault("insured2IsSameAsOwner", false);
+            
+            if (insured2Obj != null) {
+                // Convert insured ID to string regardless of whether it's an Integer or String
+                String insured2 = String.valueOf(insured2Obj);
+                
+                if (!insured2.isEmpty()) {
+                    // Get client GUID
+                    String clientGUID = getClientGUID(insured2);
+                    
+                    if (clientGUID != null) {
+                        // Insert role based on whether insured is same as owner or new
+                        if (Boolean.TRUE.equals(insured2IsSameAsOwner)) {
+                            // For owner-insureds, insert role with ApplicationFormGUID as null
+                            insertOwnerInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
+                            log.info("Insured 2 is same as owner, inserted role for ClientGUID: {}", clientGUID);
+                        } else {
+                            // For new insureds, insert role with ApplicationFormGUID value
+                            insertNewInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
+                            log.info("Insured 2 is a new insured, inserted role for ClientGUID: {}", clientGUID);
+                        }
+                    }
                 }
             }
         }
     }
     
-    private String getClientGUIDForInsured(String insuredId) {
+    // Simplified method to just get the clientGUID directly
+    private String getClientGUID(String insuredId) {
         try {
-            // Get client GUID from insured ID (which is likely stored somewhere else)
+            // Try to get the client GUID from the role 
             return jdbcTemplate.queryForObject(
-                "SELECT ClientGUID FROM frclient WHERE ClientGUID = (SELECT ClientGUID FROM frrole WHERE RoleGUID = ?)",
+                "SELECT ClientGUID FROM frrole WHERE RoleGUID = ?",
                 String.class,
                 insuredId
             );
-        } catch (Exception e) {
-            log.error("Error getting client GUID for insured: {}", e.getMessage());
+        } catch (Exception ex) {
+            log.error("Error getting client GUID for insured ID {}: {}", insuredId, ex.getMessage());
             return null;
         }
     }
     
-    private void insertRole(String clientGUID, String applicationFormGUID, String coverageGUID) {
+    // For insureds who are the same as owners
+    private void insertOwnerInsuredRole(String clientGUID, String applicationFormGUID, String coverageGUID) {
+        String roleGUID = UUID.randomUUID().toString();
+        jdbcTemplate.update(
+            "INSERT INTO frrole (RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, CoverageGUID, IssueDate, StatusCode) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            roleGUID, "02", clientGUID, null, coverageGUID, LocalDate.now(), "01"
+        );
+        log.info("Inserted owner-insured role for ClientGUID: {}", clientGUID);
+    }
+    
+    // For new insureds who are not owners
+    private void insertNewInsuredRole(String clientGUID, String applicationFormGUID, String coverageGUID) {
         String roleGUID = UUID.randomUUID().toString();
         jdbcTemplate.update(
             "INSERT INTO frrole (RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, CoverageGUID, IssueDate, StatusCode) " +
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             roleGUID, "02", clientGUID, applicationFormGUID, coverageGUID, LocalDate.now(), "01"
         );
+        log.info("Inserted new insured role for ClientGUID: {}", clientGUID);
     }
     
     private void saveCoverageDetails(Map<String, Object> baseCoverageData, String coverageGUID) {
@@ -209,12 +259,24 @@ public class CoverageService {
     }
     
     private String mapUnderwritingClassToCode(String uwClass) {
-        return switch (uwClass) {
-            case "Standard" -> "01";
-            case "Standard Plus" -> "02";
-            case "Preferred" -> "03";
-            case "Preferred Plus" -> "04";
-            default -> "01"; // Default to Standard
-        };
+        String code;
+        switch (uwClass) {
+            case "Standard":
+                code = "01";
+                break;
+            case "Standard Plus":
+                code = "02";
+                break;
+            case "Preferred":
+                code = "03";
+                break;
+            case "Preferred Plus":
+                code = "04";
+                break;
+            default:
+                code = "01"; // Default to Standard
+                break;
+        }
+        return code;
     }
 } 

@@ -9,6 +9,7 @@ import {
   Select,
   MenuItem,
   Grid,
+  Typography
 } from '@mui/material';
 import CollapsibleSection from '../../components/common/CollapsibleSection';
 import BaseCoverage from '../../components/coverage/BaseCoverage';
@@ -86,10 +87,11 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const [updateApplicationPlan] = useUpdateApplicationPlanMutation();
   const [saveBaseCoverage] = useSaveBaseCoverageMutation();
 
-  // Update local state and Redux store
+  // Update local state and validate
   const handleProductDataChange = (newData) => {
     setProductDataState(newData);
-    // dispatch(setProductData(newData));
+    validateAndUpdateSection('product', newData);
+    // We don't dispatch to Redux here since we'll do that when saving to the database
   };
 
   const handleBaseCoverageDataChange = (newData) => {
@@ -303,7 +305,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
   };
 
   // Handle section expansion
-  const handleSectionChange = (sectionId, sectionName) => () => {
+  const handleSectionChange = (sectionId, sectionName) => async () => {
+    // If section is already expanded, collapse it
     if (expandedSections[sectionId] === sectionName) {
       setExpandedSections(prev => ({
         ...prev,
@@ -349,6 +352,30 @@ function Coverage({ applicationNumber, onStepComplete }) {
       if (!isValid) {
         setShowErrors(true);
         toast.error('Please complete the previous section first');
+        return;
+      }
+    }
+
+    // If we're expanding the base coverage section, save the product selection first
+    if (sectionId === 'base' && sectionName === 'coverage') {
+      try {
+        if (productData.planGUID) {
+          await updateApplicationPlan({
+            applicationNumber,
+            planGUID: productData.planGUID
+          }).unwrap();
+
+          // Save product data to Redux store
+          dispatch(setProductData(productData));
+
+          toast.success('Product selection saved successfully');
+        } else {
+          toast.error('Please select a product and plan first');
+          return;
+        }
+      } catch (error) {
+        console.error('Error saving product selection:', error);
+        toast.error('Error saving product selection. Please try again.');
         return;
       }
     }
@@ -537,16 +564,44 @@ function Coverage({ applicationNumber, onStepComplete }) {
     }
 
     try {
+      // We use an enhanced version of the baseCoverageData that includes owner information
+      const enhancedBaseCoverageData = { ...baseCoverageData, planGUID: productData.planGUID };
+
+      // Function to check if an insured is the same as an owner (has matching SSN)
+      const isInsuredSameAsOwner = (insuredId) => {
+        const insured = owners.find(owner => owner.id === insuredId);
+        if (!insured || !insured.ssn) return false;
+
+        // An insured is considered the same as an owner when the SSN matches
+        // This determines how we'll save the insured in the backend:
+        // - If true: The insured will use a role with ApplicationFormGUID = null 
+        // - If false: The insured will use a role with the ApplicationFormGUID value
+        return mainOwners.some(owner => owner.ssn === insured.ssn);
+      };
+
+      // Add information about which insureds are the same as owners
+      if (enhancedBaseCoverageData.insured1) {
+        enhancedBaseCoverageData.insured1IsSameAsOwner = isInsuredSameAsOwner(enhancedBaseCoverageData.insured1);
+      }
+
+      if (enhancedBaseCoverageData.coverageType === 'joint' && enhancedBaseCoverageData.insured2) {
+        enhancedBaseCoverageData.insured2IsSameAsOwner = isInsuredSameAsOwner(enhancedBaseCoverageData.insured2);
+      }
+
+      console.log('Saving base coverage with data:', enhancedBaseCoverageData);
+
+      // Save the product data first if needed
       if (productData.planGUID) {
         await updateApplicationPlan({
           applicationNumber,
           planGUID: productData.planGUID
         }).unwrap();
       }
-      console.log(baseCoverageData);
+
+      // Save the base coverage data with the enhanced information
       await saveBaseCoverage({
         applicationNumber,
-        coverageData: { ...baseCoverageData, planGUID: productData.planGUID }
+        coverageData: enhancedBaseCoverageData
       }).unwrap();
 
       dispatch(nextStep());
@@ -634,7 +689,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
   return (
     <Box sx={{ pb: 3 }}>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8.4}> 
+        <Grid item xs={12} md={8.4}>
           <CollapsibleSection
             title="Product Selector"
             isEnabled={true}
@@ -688,6 +743,9 @@ function Coverage({ applicationNumber, onStepComplete }) {
                 </FormControl>
               )}
             </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
+              Your product selection will be saved when you proceed to the Base Coverage section.
+            </Typography>
           </CollapsibleSection>
 
           <CollapsibleSection
