@@ -217,18 +217,6 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
             }
             label="Same as Owner"
           />
-          {isOwnerSelected(data.insured1) && (
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 'medium',
-                ml: -1
-              }}
-            >
-              (Owner-Insured)
-            </Typography>
-          )}
         </Box>
         {!isOwnerSelected(data.insured1) && data.insured1 && (
           <FormControl fullWidth>

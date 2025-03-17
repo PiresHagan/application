@@ -133,7 +133,6 @@ function AdditionalCoverage({
     return null;
   };
 
-  // Function to determine if an owner is already selected in another coverage
   const isOwnerUsedElsewhere = (ownerId, currentCoverageId) => {
     // Check if used in base coverage
     if (baseCoverageData.insured1 === ownerId || baseCoverageData.insured2 === ownerId) {
@@ -204,8 +203,8 @@ function AdditionalCoverage({
                 >
                   {owners
                     .filter(owner =>
-                      owner.ownerType === '01' &&
-                      !isOwnerUsedElsewhere(owner.id, coverage.id)
+                      owner.ownerType === '01' && true
+                      // !isOwnerUsedElsewhere(owner.id, coverage.id)
                     )
                     .map(owner => renderOwnerMenuItem(owner, coverage.id))
                   }

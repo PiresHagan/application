@@ -23,6 +23,7 @@ import CollapsibleSection from '../../components/common/CollapsibleSection';
 import TabPanel from '../../components/common/TabPanel';
 import { nextStep, previousStep } from '../../slices/stepSlice';
 import { saveMedicalData } from '../../slices/medicalSlice';
+import { toast } from 'react-toastify';
 
 function a11yProps(index) {
   return {
@@ -416,9 +417,53 @@ function Medical({ applicationNumber, onStepComplete }) {
   };
 
   const handleNext = () => {
+    // If we're just switching between insured tabs
     if (activeTab < insureds.length - 1) {
+      // Validate current insured's form before allowing to move to next tab
+      const currentInsuredId = insureds[activeTab].id;
+      const isCurrentInsuredValid = validateForm(currentInsuredId);
+
+      if (!isCurrentInsuredValid) {
+        setHasErrors(true);
+        // Expand all sections to show errors
+        const newExpandedState = { ...expandedSections };
+        Object.keys(sectionValidation[currentInsuredId] || {}).forEach(section => {
+          if (!sectionValidation[currentInsuredId][section]) {
+            newExpandedState[`${currentInsuredId}-${section}`] = true;
+          }
+        });
+        setExpandedSections(newExpandedState);
+
+        // Show toast message
+        toast.error('Please complete all required fields before proceeding');
+        return;
+      }
+
+      // If valid, proceed to next tab
       setActiveTab(activeTab + 1);
     } else {
+      // We're on the last tab and trying to go to the next step
+      // Validate all insureds' forms
+      const isAllValid = insureds.every(insured => validateForm(insured.id));
+
+      if (!isAllValid) {
+        setHasErrors(true);
+        // Keep current tab, show error
+        toast.error('Please complete all required fields before proceeding');
+
+        // Expand invalid sections for current insured to show errors
+        const currentInsuredId = insureds[activeTab].id;
+        const newExpandedState = { ...expandedSections };
+        Object.keys(sectionValidation[currentInsuredId] || {}).forEach(section => {
+          if (!sectionValidation[currentInsuredId][section]) {
+            newExpandedState[`${currentInsuredId}-${section}`] = true;
+          }
+        });
+        setExpandedSections(newExpandedState);
+        return;
+      }
+
+      // If all valid, save and proceed
       dispatch(saveMedicalData(formData));
       dispatch(nextStep());
     }
@@ -433,7 +478,31 @@ function Medical({ applicationNumber, onStepComplete }) {
   };
 
   const validateForm = (insuredId) => {
-    return true;
+    // Check that all sections for this insured are valid
+    const insuredSections = sectionValidation[insuredId] || {};
+
+    // Required sections that must be validated
+    const requiredSections = [
+      'heightWeight',
+      'tobaccoSubstance',
+      'chronicConditions',
+      'recentMedical',
+      'medications',
+      'mentalHealth',
+      'familyHistory',
+      'hivStd',
+      'sleepDisorders',
+      'otherConditions',
+      'highRiskActivities',
+      'hazardousTravel',
+      'pilotLicense',
+      'alcohol',
+      'dui',
+      'military',
+      'occupationRisks'
+    ];
+
+    return requiredSections.every(section => insuredSections[section] === true);
   };
 
   const renderHeightWeightSection = (insuredId) => (

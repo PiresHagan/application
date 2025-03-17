@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   product: {
     product: 'Whole Life',
-    plan: 'WL LifePay',
+    plan: 'Whole Life Life Pay',
     productGUID: '',
     planGUID: ''
   },

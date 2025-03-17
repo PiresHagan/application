@@ -182,7 +182,7 @@ function Create() {
             ))}
           </Stepper>
 
-          <Typography
+          {/* <Typography
             variant="caption"
             align="center"
             sx={{
@@ -193,7 +193,7 @@ function Create() {
             }}
           >
             Tip: Complete each step to unlock the next one. Completed steps stay checked even when you navigate back.
-          </Typography>
+          </Typography> */}
         </Box>
         {_renderStepContent(activeStep)}
       </Container>

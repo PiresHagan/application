@@ -91,7 +91,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const handleProductDataChange = (newData) => {
     setProductDataState(newData);
     validateAndUpdateSection('product', newData);
-    // We don't dispatch to Redux here since we'll do that when saving to the database
   };
 
   const handleBaseCoverageDataChange = (newData) => {
@@ -115,11 +114,29 @@ function Coverage({ applicationNumber, onStepComplete }) {
       ? Math.max(...additionalCoverages.map(c => c.id)) + 1
       : 1;
 
+    // Find first available individual owner who isn't already used as an insured
+    let defaultInsured = '';
+    const individualOwners = owners.filter(owner => owner.ownerType === '01');
+
+    // if (individualOwners.length > 0) {
+    //   const usedInsuredIds = [
+    //     baseCoverageData.insured1,
+    //     baseCoverageData.insured2,
+    //     ...additionalCoverages.map(c => c.insured1)
+    //   ].filter(Boolean);  
+
+      // const availableOwner = individualOwners.find(owner => !usedInsuredIds.includes(owner.id));
+      if (individualOwners) {
+        console.log('individualOwners', individualOwners);
+        defaultInsured = individualOwners[0].id;
+      }
+    // }
+
     const newCoverage = {
       id: newId,
       coverageType: 'single',
       coverage: 'Term 10',
-      insured1: '',
+      insured1: '1',
       faceAmount: '100000',
       tableRating: '100%',
       permanentFlatExtra: false,
@@ -743,9 +760,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
                 </FormControl>
               )}
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
-              Your product selection will be saved when you proceed to the Base Coverage section.
-            </Typography>
           </CollapsibleSection>
 
           <CollapsibleSection
