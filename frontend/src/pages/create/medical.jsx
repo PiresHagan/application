@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import CollapsibleSection from '../../components/common/CollapsibleSection';
 import TabPanel from '../../components/common/TabPanel';
 import { nextStep, previousStep } from '../../slices/stepSlice';
-import { saveMedicalData } from '../../slices/medicalSlice'; // You'll need to create this slice
+import { saveMedicalData } from '../../slices/medicalSlice';
 
 function a11yProps(index) {
   return {
@@ -59,16 +59,16 @@ function Medical({ applicationNumber, onStepComplete }) {
           heightWeight: {
             height: '',
             weight: '',
-            suddenWeightChange: 'N'
+            suddenWeightChange: ''
           },
           tobaccoSubstance: {
-            usesTobacco: 'N',
+            usesTobacco: '',
             packsPerDay: '',
             yearsSmoked: '',
-            hasQuit: 'N',
+            hasQuit: '',
             yearsQuit: '',
-            usesRecreationalDrugs: 'N',
-            substanceAbuseTreatment: 'N'
+            usesRecreationalDrugs: '',
+            substanceAbuseTreatment: ''
           },
           chronicConditions: {
             heartDisease: false,
@@ -81,39 +81,41 @@ function Medical({ applicationNumber, onStepComplete }) {
             kidneyDisease: false,
             liverDisease: false,
             lungDisease: false,
-            neurologicalDisorders: false
+            neurologicalDisorders: false,
+            noneOfTheAbove: false
           },
           recentMedical: {
-            recentSurgery: 'N',
-            recentHospitalization: 'N',
-            currentTreatment: 'N',
+            recentSurgery: '',
+            recentHospitalization: '',
+            currentTreatment: '',
             currentTreatmentDetails: ''
           },
           medications: {
-            takesMedications: 'N',
+            takesMedications: '',
             medicationDetails: ''
           },
           mentalHealth: {
-            mentalHealthDiagnosis: 'N',
-            mentalHealthHospitalization: 'N',
-            mentalHealthMedications: 'N'
+            mentalHealthDiagnosis: '',
+            mentalHealthHospitalization: '',
+            mentalHealthMedications: ''
           },
           familyHistory: {
             familyCancer: false,
             familyHeartDisease: false,
             familyDiabetes: false,
             familyStroke: false,
-            familyHighBloodPressure: false
+            familyHighBloodPressure: false,
+            noneOfTheAbove: false
           },
           hivStd: {
-            hivPositive: 'N',
-            stdDiagnosis: 'N'
+            hivPositive: '',
+            stdDiagnosis: ''
           },
           sleepDisorders: {
-            sleepApnea: 'N'
+            sleepApnea: ''
           },
           otherConditions: {
-            hasOtherConditions: 'N',
+            hasOtherConditions: '',
             otherConditionsDetails: ''
           },
           highRiskActivities: {
@@ -128,31 +130,32 @@ function Medical({ applicationNumber, onStepComplete }) {
             whitewaterRafting: false,
             bigGameHunting: false,
             bullRiding: false,
-            professionalSports: false
+            professionalSports: false,
+            noneOfTheAbove: false
           },
           hazardousTravel: {
-            frequentTravel: 'N',
-            travelWarningCountries: 'N',
-            warZones: 'N'
+            frequentTravel: '',
+            travelWarningCountries: '',
+            warZones: ''
           },
           pilotLicense: {
-            hasPilotLicense: 'N',
-            fliesUltralight: 'N',
+            hasPilotLicense: '',
+            fliesUltralight: '',
             flyingHours: ''
           },
           alcohol: {
-            alcoholConsumption: 'None'
+            alcoholConsumption: ''
           },
           dui: {
-            hasDUI: 'N',
+            hasDUI: '',
             duiDetails: ''
           },
           military: {
-            militaryService: 'N',
-            highRiskUnit: 'N'
+            militaryService: '',
+            highRiskUnit: ''
           },
           occupationRisks: {
-            highRiskJob: 'N',
+            highRiskJob: '',
             firefighter: false,
             policeOfficer: false,
             militaryCombat: false,
@@ -162,6 +165,30 @@ function Medical({ applicationNumber, onStepComplete }) {
             explosivesWorker: false
           }
         };
+
+        // Initialize section validation
+        setSectionValidation(prev => ({
+          ...prev,
+          [insured.id]: {
+            heightWeight: false,
+            tobaccoSubstance: false,
+            chronicConditions: false,
+            recentMedical: false,
+            medications: false,
+            mentalHealth: false,
+            familyHistory: false,
+            hivStd: false,
+            sleepDisorders: false,
+            otherConditions: false,
+            highRiskActivities: false,
+            hazardousTravel: false,
+            pilotLicense: false,
+            alcohol: false,
+            dui: false,
+            military: false,
+            occupationRisks: false
+          }
+        }));
       });
       setFormData(initialData);
 
@@ -235,17 +262,48 @@ function Medical({ applicationNumber, onStepComplete }) {
   };
 
   const handleFieldChange = (insuredId, section, field, value) => {
+    let updatedSection = {};
+
+    // Special handling for "None of the above" selection
+    if (field === 'noneOfTheAbove' && value === true &&
+      (section === 'chronicConditions' || section === 'familyHistory' || section === 'highRiskActivities')) {
+      // If "None of the above" is checked, uncheck all other options
+      const currentSection = formData[insuredId][section] || {};
+      updatedSection = Object.keys(currentSection).reduce((acc, key) => {
+        if (key === 'noneOfTheAbove') {
+          acc[key] = true;
+        } else if (typeof currentSection[key] === 'boolean') {
+          acc[key] = false;
+        } else {
+          acc[key] = currentSection[key];
+        }
+        return acc;
+      }, {});
+    } else if ((section === 'chronicConditions' || section === 'familyHistory' || section === 'highRiskActivities') &&
+      typeof value === 'boolean' && value === true && field !== 'noneOfTheAbove') {
+      // If any other checkbox is checked, uncheck "None of the above"
+      updatedSection = {
+        ...formData[insuredId][section],
+        [field]: value,
+        noneOfTheAbove: false
+      };
+    } else {
+      // Standard field update
+      updatedSection = {
+        ...formData[insuredId][section],
+        [field]: value
+      };
+    }
+
     setFormData(prevData => ({
       ...prevData,
       [insuredId]: {
         ...prevData[insuredId],
-        [section]: {
-          ...prevData[insuredId][section],
-          [field]: value
-        }
+        [section]: updatedSection
       }
     }));
 
+    // Special handling for tobacco section
     if (field === 'usesTobacco' && value === 'N') {
       setFormData(prevData => ({
         ...prevData,
@@ -256,13 +314,105 @@ function Medical({ applicationNumber, onStepComplete }) {
             usesTobacco: 'N',
             packsPerDay: '',
             yearsSmoked: '',
-            hasQuit: 'N',
+            hasQuit: '',
             yearsQuit: ''
           }
         }
       }));
     }
 
+    // Update section validation
+    updateSectionValidation(insuredId, section, updatedSection);
+  };
+
+  // Helper function to check section completion
+  const updateSectionValidation = (insuredId, section, sectionData) => {
+    let isValid = false;
+
+    switch (section) {
+      case 'heightWeight':
+        isValid = sectionData.suddenWeightChange !== '';
+        break;
+      case 'tobaccoSubstance':
+        isValid = sectionData.usesTobacco !== '' &&
+          (sectionData.usesTobacco === 'N' ||
+            (sectionData.packsPerDay !== '' && sectionData.yearsSmoked !== '' &&
+              sectionData.hasQuit !== '')) &&
+          sectionData.usesRecreationalDrugs !== '' &&
+          sectionData.substanceAbuseTreatment !== '';
+        break;
+      case 'chronicConditions':
+        isValid = sectionData.noneOfTheAbove === true ||
+          Object.keys(sectionData).some(key => key !== 'noneOfTheAbove' &&
+            key !== 'cancerDetails' &&
+            sectionData[key] === true);
+        break;
+      case 'recentMedical':
+        isValid = sectionData.recentSurgery !== '' &&
+          sectionData.recentHospitalization !== '' &&
+          sectionData.currentTreatment !== '';
+        break;
+      case 'medications':
+        isValid = sectionData.takesMedications !== '' &&
+          (sectionData.takesMedications === 'N' || sectionData.medicationDetails !== '');
+        break;
+      case 'mentalHealth':
+        isValid = sectionData.mentalHealthDiagnosis !== '' &&
+          sectionData.mentalHealthHospitalization !== '' &&
+          sectionData.mentalHealthMedications !== '';
+        break;
+      case 'familyHistory':
+        isValid = sectionData.noneOfTheAbove === true ||
+          Object.keys(sectionData).some(key => key !== 'noneOfTheAbove' && sectionData[key] === true);
+        break;
+      case 'hivStd':
+        isValid = sectionData.hivPositive !== '' && sectionData.stdDiagnosis !== '';
+        break;
+      case 'sleepDisorders':
+        isValid = sectionData.sleepApnea !== '';
+        break;
+      case 'otherConditions':
+        isValid = sectionData.hasOtherConditions !== '' &&
+          (sectionData.hasOtherConditions === 'N' || sectionData.otherConditionsDetails !== '');
+        break;
+      case 'highRiskActivities':
+        isValid = sectionData.noneOfTheAbove === true ||
+          Object.keys(sectionData).some(key => key !== 'noneOfTheAbove' && sectionData[key] === true);
+        break;
+      case 'hazardousTravel':
+        isValid = sectionData.frequentTravel !== '' &&
+          sectionData.travelWarningCountries !== '' &&
+          sectionData.warZones !== '';
+        break;
+      case 'pilotLicense':
+        isValid = sectionData.hasPilotLicense !== '' &&
+          (sectionData.hasPilotLicense === 'N' || sectionData.fliesUltralight !== '');
+        break;
+      case 'alcohol':
+        isValid = sectionData.alcoholConsumption !== '';
+        break;
+      case 'dui':
+        isValid = sectionData.hasDUI !== '' &&
+          (sectionData.hasDUI === 'N' || sectionData.duiDetails !== '');
+        break;
+      case 'military':
+        isValid = sectionData.militaryService !== '' &&
+          (sectionData.militaryService === 'N' || sectionData.highRiskUnit !== '');
+        break;
+      case 'occupationRisks':
+        isValid = sectionData.highRiskJob !== '';
+        break;
+      default:
+        isValid = false;
+    }
+
+    setSectionValidation(prev => ({
+      ...prev,
+      [insuredId]: {
+        ...(prev[insuredId] || {}),
+        [section]: isValid
+      }
+    }));
   };
 
   const handleNext = () => {
@@ -291,7 +441,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Height & Weight"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-heightWeight`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.heightWeight || false}
       onExpand={handleSectionChange(insuredId, 'heightWeight')}
       ownerId={insuredId}
       sectionName="heightWeight"
@@ -324,7 +474,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.heightWeight?.suddenWeightChange || 'N'}
+            value={formData[insuredId]?.heightWeight?.suddenWeightChange || ''}
             onChange={(e) => handleFieldChange(insuredId, 'heightWeight', 'suddenWeightChange', e.target.value)}
           >
             <FormControlLabel value="Y" control={<Radio />} label="Yes" />
@@ -340,7 +490,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Tobacco & Substance Use"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-tobaccoSubstance`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.tobaccoSubstance || false}
       onExpand={handleSectionChange(insuredId, 'tobaccoSubstance')}
       ownerId={insuredId}
       sectionName="tobaccoSubstance"
@@ -351,7 +501,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.tobaccoSubstance?.usesTobacco || 'N'}
+        value={formData[insuredId]?.tobaccoSubstance?.usesTobacco || ''}
         onChange={(e) => handleFieldChange(insuredId, 'tobaccoSubstance', 'usesTobacco', e.target.value)}
         sx={{ mb: 2 }}
       >
@@ -388,7 +538,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.tobaccoSubstance?.hasQuit || 'N'}
+            value={formData[insuredId]?.tobaccoSubstance?.hasQuit || ''}
             onChange={(e) => handleFieldChange(insuredId, 'tobaccoSubstance', 'hasQuit', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -414,7 +564,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.tobaccoSubstance?.usesRecreationalDrugs || 'N'}
+        value={formData[insuredId]?.tobaccoSubstance?.usesRecreationalDrugs || ''}
         onChange={(e) => handleFieldChange(insuredId, 'tobaccoSubstance', 'usesRecreationalDrugs', e.target.value)}
         sx={{ mb: 2 }}
       >
@@ -427,7 +577,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.tobaccoSubstance?.substanceAbuseTreatment || 'N'}
+        value={formData[insuredId]?.tobaccoSubstance?.substanceAbuseTreatment || ''}
         onChange={(e) => handleFieldChange(insuredId, 'tobaccoSubstance', 'substanceAbuseTreatment', e.target.value)}
       >
         <FormControlLabel value="Y" control={<Radio />} label="Yes" />
@@ -441,7 +591,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Chronic & Pre-Existing Conditions"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-chronicConditions`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.chronicConditions || false}
       onExpand={handleSectionChange(insuredId, 'chronicConditions')}
       ownerId={insuredId}
       sectionName="chronicConditions"
@@ -457,6 +607,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.heartDisease || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'heartDisease', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="Heart disease"
@@ -468,6 +619,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.highBloodPressure || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'highBloodPressure', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="High blood pressure"
@@ -479,6 +631,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.highCholesterol || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'highCholesterol', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="High cholesterol"
@@ -490,6 +643,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.stroke || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'stroke', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="Stroke"
@@ -501,6 +655,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.diabetes || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'diabetes', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="Diabetes (Type 1 or Type 2)"
@@ -512,6 +667,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.cancer || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'cancer', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="Cancer"
@@ -525,6 +681,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               value={formData[insuredId]?.chronicConditions?.cancerDetails || ''}
               onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'cancerDetails', e.target.value)}
               margin="normal"
+              disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
             />
           </Grid>
         )}
@@ -534,6 +691,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.kidneyDisease || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'kidneyDisease', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="Kidney disease"
@@ -545,6 +703,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.liverDisease || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'liverDisease', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="Liver disease"
@@ -556,6 +715,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.lungDisease || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'lungDisease', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="Lung disease (e.g., asthma, COPD)"
@@ -567,9 +727,21 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.chronicConditions?.neurologicalDisorders || false}
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'neurologicalDisorders', e.target.checked)}
+                disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
             label="Neurological disorders"
+          />
+        </Grid>
+        <Grid item xs={12} sx={{ borderTop: '1px solid #e0e0e0', mt: 2, pt: 2 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
+                onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'noneOfTheAbove', e.target.checked)}
+              />
+            }
+            label="None of the above"
           />
         </Grid>
       </Grid>
@@ -581,7 +753,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Recent Medical History"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-recentMedical`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.recentMedical || false}
       onExpand={handleSectionChange(insuredId, 'recentMedical')}
       ownerId={insuredId}
       sectionName="recentMedical"
@@ -594,7 +766,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.recentMedical?.recentSurgery || 'N'}
+            value={formData[insuredId]?.recentMedical?.recentSurgery || ''}
             onChange={(e) => handleFieldChange(insuredId, 'recentMedical', 'recentSurgery', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -609,7 +781,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.recentMedical?.recentHospitalization || 'N'}
+            value={formData[insuredId]?.recentMedical?.recentHospitalization || ''}
             onChange={(e) => handleFieldChange(insuredId, 'recentMedical', 'recentHospitalization', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -624,7 +796,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.recentMedical?.currentTreatment || 'N'}
+            value={formData[insuredId]?.recentMedical?.currentTreatment || ''}
             onChange={(e) => handleFieldChange(insuredId, 'recentMedical', 'currentTreatment', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -655,7 +827,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Medications"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-medications`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.medications || false}
       onExpand={handleSectionChange(insuredId, 'medications')}
       ownerId={insuredId}
       sectionName="medications"
@@ -666,7 +838,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.medications?.takesMedications || 'N'}
+        value={formData[insuredId]?.medications?.takesMedications || ''}
         onChange={(e) => handleFieldChange(insuredId, 'medications', 'takesMedications', e.target.value)}
         sx={{ mb: 2 }}
       >
@@ -694,7 +866,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Mental Health"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-mentalHealth`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.mentalHealth || false}
       onExpand={handleSectionChange(insuredId, 'mentalHealth')}
       ownerId={insuredId}
       sectionName="mentalHealth"
@@ -707,7 +879,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.mentalHealth?.mentalHealthDiagnosis || 'N'}
+            value={formData[insuredId]?.mentalHealth?.mentalHealthDiagnosis || ''}
             onChange={(e) => handleFieldChange(insuredId, 'mentalHealth', 'mentalHealthDiagnosis', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -722,7 +894,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.mentalHealth?.mentalHealthHospitalization || 'N'}
+            value={formData[insuredId]?.mentalHealth?.mentalHealthHospitalization || ''}
             onChange={(e) => handleFieldChange(insuredId, 'mentalHealth', 'mentalHealthHospitalization', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -737,7 +909,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.mentalHealth?.mentalHealthMedications || 'N'}
+            value={formData[insuredId]?.mentalHealth?.mentalHealthMedications || ''}
             onChange={(e) => handleFieldChange(insuredId, 'mentalHealth', 'mentalHealthMedications', e.target.value)}
           >
             <FormControlLabel value="Y" control={<Radio />} label="Yes" />
@@ -753,7 +925,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Family History"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-familyHistory`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.familyHistory || false}
       onExpand={handleSectionChange(insuredId, 'familyHistory')}
       ownerId={insuredId}
       sectionName="familyHistory"
@@ -769,6 +941,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.familyHistory?.familyCancer || false}
                 onChange={(e) => handleFieldChange(insuredId, 'familyHistory', 'familyCancer', e.target.checked)}
+                disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
             label="Cancer"
@@ -780,6 +953,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.familyHistory?.familyHeartDisease || false}
                 onChange={(e) => handleFieldChange(insuredId, 'familyHistory', 'familyHeartDisease', e.target.checked)}
+                disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
             label="Heart disease"
@@ -791,6 +965,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.familyHistory?.familyDiabetes || false}
                 onChange={(e) => handleFieldChange(insuredId, 'familyHistory', 'familyDiabetes', e.target.checked)}
+                disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
             label="Diabetes"
@@ -802,6 +977,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.familyHistory?.familyStroke || false}
                 onChange={(e) => handleFieldChange(insuredId, 'familyHistory', 'familyStroke', e.target.checked)}
+                disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
             label="Stroke"
@@ -813,9 +989,21 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.familyHistory?.familyHighBloodPressure || false}
                 onChange={(e) => handleFieldChange(insuredId, 'familyHistory', 'familyHighBloodPressure', e.target.checked)}
+                disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
             label="High blood pressure"
+          />
+        </Grid>
+        <Grid item xs={12} sx={{ borderTop: '1px solid #e0e0e0', mt: 2, pt: 2 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
+                onChange={(e) => handleFieldChange(insuredId, 'familyHistory', 'noneOfTheAbove', e.target.checked)}
+              />
+            }
+            label="None of the above"
           />
         </Grid>
       </Grid>
@@ -827,7 +1015,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="HIV/AIDS & STDs"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-hivStd`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.hivStd || false}
       onExpand={handleSectionChange(insuredId, 'hivStd')}
       ownerId={insuredId}
       sectionName="hivStd"
@@ -840,7 +1028,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.hivStd?.hivPositive || 'N'}
+            value={formData[insuredId]?.hivStd?.hivPositive || ''}
             onChange={(e) => handleFieldChange(insuredId, 'hivStd', 'hivPositive', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -855,7 +1043,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.hivStd?.stdDiagnosis || 'N'}
+            value={formData[insuredId]?.hivStd?.stdDiagnosis || ''}
             onChange={(e) => handleFieldChange(insuredId, 'hivStd', 'stdDiagnosis', e.target.value)}
           >
             <FormControlLabel value="Y" control={<Radio />} label="Yes" />
@@ -871,7 +1059,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Sleep Disorders"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-sleepDisorders`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.sleepDisorders || false}
       onExpand={handleSectionChange(insuredId, 'sleepDisorders')}
       ownerId={insuredId}
       sectionName="sleepDisorders"
@@ -882,7 +1070,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.sleepDisorders?.sleepApnea || 'N'}
+        value={formData[insuredId]?.sleepDisorders?.sleepApnea || ''}
         onChange={(e) => handleFieldChange(insuredId, 'sleepDisorders', 'sleepApnea', e.target.value)}
       >
         <FormControlLabel value="Y" control={<Radio />} label="Yes" />
@@ -896,7 +1084,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Other Conditions"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-otherConditions`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.otherConditions || false}
       onExpand={handleSectionChange(insuredId, 'otherConditions')}
       ownerId={insuredId}
       sectionName="otherConditions"
@@ -907,7 +1095,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.otherConditions?.hasOtherConditions || 'N'}
+        value={formData[insuredId]?.otherConditions?.hasOtherConditions || ''}
         onChange={(e) => handleFieldChange(insuredId, 'otherConditions', 'hasOtherConditions', e.target.value)}
         sx={{ mb: 2 }}
       >
@@ -934,7 +1122,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="High-Risk Activities & Dangerous Hobbies"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-highRiskActivities`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.highRiskActivities || false}
       onExpand={handleSectionChange(insuredId, 'highRiskActivities')}
       ownerId={insuredId}
       sectionName="highRiskActivities"
@@ -950,6 +1138,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.skydiving || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'skydiving', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Skydiving"
@@ -961,6 +1150,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.scubaDiving || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'scubaDiving', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Scuba Diving"
@@ -972,6 +1162,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.rockClimbing || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'rockClimbing', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Rock Climbing"
@@ -983,6 +1174,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.baseJumping || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'baseJumping', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Base Jumping"
@@ -994,6 +1186,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.hangGliding || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'hangGliding', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Hang Gliding"
@@ -1005,6 +1198,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.bungeeJumping || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'bungeeJumping', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Bungee Jumping"
@@ -1016,9 +1210,10 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.motorsports || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'motorsports', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Motorsports (Racing, MotoGP, Off-road)"
+            label="Motorsports (racing)"
           />
         </Grid>
         <Grid item xs={6}>
@@ -1027,6 +1222,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.extremeHiking || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'extremeHiking', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Extreme Hiking"
@@ -1038,6 +1234,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.whitewaterRafting || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'whitewaterRafting', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Whitewater Rafting"
@@ -1049,9 +1246,10 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.bigGameHunting || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'bigGameHunting', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Big-Game Hunting"
+            label="Big Game Hunting"
           />
         </Grid>
         <Grid item xs={6}>
@@ -1060,9 +1258,10 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.bullRiding || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'bullRiding', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Bull Riding/Rodeo"
+            label="Bull Riding"
           />
         </Grid>
         <Grid item xs={6}>
@@ -1071,9 +1270,21 @@ function Medical({ applicationNumber, onStepComplete }) {
               <Checkbox
                 checked={formData[insuredId]?.highRiskActivities?.professionalSports || false}
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'professionalSports', e.target.checked)}
+                disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
             label="Professional Sports"
+          />
+        </Grid>
+        <Grid item xs={12} sx={{ borderTop: '1px solid #e0e0e0', mt: 2, pt: 2 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
+                onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'noneOfTheAbove', e.target.checked)}
+              />
+            }
+            label="None of the above"
           />
         </Grid>
       </Grid>
@@ -1085,7 +1296,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Travel to Hazardous Locations"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-hazardousTravel`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.hazardousTravel || false}
       onExpand={handleSectionChange(insuredId, 'hazardousTravel')}
       ownerId={insuredId}
       sectionName="hazardousTravel"
@@ -1098,7 +1309,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.hazardousTravel?.frequentTravel || 'N'}
+            value={formData[insuredId]?.hazardousTravel?.frequentTravel || ''}
             onChange={(e) => handleFieldChange(insuredId, 'hazardousTravel', 'frequentTravel', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -1113,7 +1324,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.hazardousTravel?.travelWarningCountries || 'N'}
+            value={formData[insuredId]?.hazardousTravel?.travelWarningCountries || ''}
             onChange={(e) => handleFieldChange(insuredId, 'hazardousTravel', 'travelWarningCountries', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -1128,7 +1339,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.hazardousTravel?.warZones || 'N'}
+            value={formData[insuredId]?.hazardousTravel?.warZones || ''}
             onChange={(e) => handleFieldChange(insuredId, 'hazardousTravel', 'warZones', e.target.value)}
           >
             <FormControlLabel value="Y" control={<Radio />} label="Yes" />
@@ -1144,7 +1355,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Pilot's License"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-pilotLicense`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.pilotLicense || false}
       onExpand={handleSectionChange(insuredId, 'pilotLicense')}
       ownerId={insuredId}
       sectionName="pilotLicense"
@@ -1157,7 +1368,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.pilotLicense?.hasPilotLicense || 'N'}
+            value={formData[insuredId]?.pilotLicense?.hasPilotLicense || ''}
             onChange={(e) => handleFieldChange(insuredId, 'pilotLicense', 'hasPilotLicense', e.target.value)}
             sx={{ mb: 2 }}
           >
@@ -1184,7 +1395,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               </Typography>
               <RadioGroup
                 row
-                value={formData[insuredId]?.pilotLicense?.fliesUltralight || 'N'}
+                value={formData[insuredId]?.pilotLicense?.fliesUltralight || ''}
                 onChange={(e) => handleFieldChange(insuredId, 'pilotLicense', 'fliesUltralight', e.target.value)}
                 sx={{ mb: 2 }}
               >
@@ -1203,7 +1414,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Do you consume alcohol?"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-alcohol`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.alcohol || false}
       onExpand={handleSectionChange(insuredId, 'alcohol')}
       ownerId={insuredId}
       sectionName="alcohol"
@@ -1226,10 +1437,10 @@ function Medical({ applicationNumber, onStepComplete }) {
 
   const renderDuiSection = (insuredId) => (
     <CollapsibleSection
-      title="DUI or Reckless Driving"
+      title="DUI Convictions"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-dui`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.dui || false}
       onExpand={handleSectionChange(insuredId, 'dui')}
       ownerId={insuredId}
       sectionName="dui"
@@ -1240,7 +1451,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.dui?.hasDUI || 'N'}
+        value={formData[insuredId]?.dui?.hasDUI || ''}
         onChange={(e) => handleFieldChange(insuredId, 'dui', 'hasDUI', e.target.value)}
         sx={{ mb: 2 }}
       >
@@ -1263,10 +1474,10 @@ function Medical({ applicationNumber, onStepComplete }) {
 
   const renderMilitarySection = (insuredId) => (
     <CollapsibleSection
-      title="Military or Law Enforcement Service"
+      title="Military Status"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-military`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.military || false}
       onExpand={handleSectionChange(insuredId, 'military')}
       ownerId={insuredId}
       sectionName="military"
@@ -1277,7 +1488,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.military?.militaryService || 'N'}
+        value={formData[insuredId]?.military?.militaryService || ''}
         onChange={(e) => handleFieldChange(insuredId, 'military', 'militaryService', e.target.value)}
         sx={{ mb: 2 }}
       >
@@ -1292,7 +1503,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Typography>
           <RadioGroup
             row
-            value={formData[insuredId]?.military?.highRiskUnit || 'N'}
+            value={formData[insuredId]?.military?.highRiskUnit || ''}
             onChange={(e) => handleFieldChange(insuredId, 'military', 'highRiskUnit', e.target.value)}
           >
             <FormControlLabel value="Y" control={<Radio />} label="Yes" />
@@ -1308,7 +1519,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       title="Occupation Risks"
       isEnabled={true}
       isExpanded={expandedSections[`${insuredId}-occupationRisks`]}
-      isValid={true}
+      isValid={sectionValidation[insuredId]?.occupationRisks || false}
       onExpand={handleSectionChange(insuredId, 'occupationRisks')}
       ownerId={insuredId}
       sectionName="occupationRisks"
@@ -1319,7 +1530,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </Typography>
       <RadioGroup
         row
-        value={formData[insuredId]?.occupationRisks?.highRiskJob || 'N'}
+        value={formData[insuredId]?.occupationRisks?.highRiskJob || ''}
         onChange={(e) => handleFieldChange(insuredId, 'occupationRisks', 'highRiskJob', e.target.value)}
         sx={{ mb: 2 }}
       >
