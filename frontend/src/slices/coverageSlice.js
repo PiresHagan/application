@@ -4,8 +4,8 @@ const initialState = {
   product: {
     product: 'Whole Life',
     plan: 'Whole Life Life Pay',
-    productGUID: '',
-    planGUID: ''
+    productGUID: 'dde8c149-fea5-11ef-bb25-0242ac120002',
+    planGUID: 'ef5b2740-feaa-11ef-bb25-0242ac120002'
   },
   base: {
     coverageType: 'single',

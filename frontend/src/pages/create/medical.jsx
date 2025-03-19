@@ -1493,7 +1493,7 @@ function Medical({ applicationNumber, onStepComplete }) {
         How many drinks per week do you consume on average?
       </Typography>
       <RadioGroup
-        value={formData[insuredId]?.alcohol?.alcoholConsumption || 'None'}
+        value={formData[insuredId]?.alcohol?.alcoholConsumption || ''}
         onChange={(e) => handleFieldChange(insuredId, 'alcohol', 'alcoholConsumption', e.target.value)}
       >
         <FormControlLabel value="None" control={<Radio />} label="None" />
@@ -1713,7 +1713,7 @@ function Medical({ applicationNumber, onStepComplete }) {
               onChange={handleTabChange}
               aria-label="insured tabs"
               variant={insureds.length > 3 ? "scrollable" : "standard"}
-              scrollButtons={insureds.length > 3 ? "auto" : "disabled"}
+              scrollButtons={insureds.length > 3 ? "auto" : false}
             >
               {insureds.map((insured, index) => (
                 <Tab

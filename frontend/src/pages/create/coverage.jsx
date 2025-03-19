@@ -36,33 +36,41 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const mainOwners = useSelector(state => state.owner.owners);
   const coverageOwners = useSelector(state => state.coverageOwners.owners);
 
-  // State for section management
-  const [expandedSections, setExpandedSections] = useState({
-    'product': 'selector',
-    'product-selector': true
+  const storedProductData = useSelector(state => state.coverage.product);
+  const storedBaseCoverageData = useSelector(state => state.coverage.base || {});
+  const storedAdditionalCoverages = useSelector(state => state.coverage.additional || []);
+  const storedRiders = useSelector(state => state.coverage.riders || []);
+
+  const [expandedSections, setExpandedSections] = useState(() => {
+    const hasBaseCoverageData = Object.keys(storedBaseCoverageData).length > 0;
+    const hasAdditionalCoverages = storedAdditionalCoverages.length > 0;
+    const hasRiders = storedRiders.length > 0;
+    
+    return {
+      'product': 'selector',
+      'product-selector': true,
+      'base': hasBaseCoverageData ? 'coverage' : null,
+      'base-coverage': hasBaseCoverageData,
+      'additional': hasAdditionalCoverages ? 'coverage' : null,
+      'additional-coverage': hasAdditionalCoverages,
+      'riders': hasRiders ? 'section' : null,
+      'riders-section': hasRiders
+    };
   });
+  
   const [sectionValidation, setSectionValidation] = useState({
-    product: false,
     base: false,
     additional: false,
     riders: false
   });
   const [attemptedSections, setAttemptedSections] = useState({});
   const [formErrors, setFormErrors] = useState({
-    product: {},
     base: {},
     additional: {},
     riders: {}
   });
   const [showErrors, setShowErrors] = useState(false);
 
-  // Get data from Redux store
-  const storedProductData = useSelector(state => state.coverage.product);
-  const storedBaseCoverageData = useSelector(state => state.coverage.base);
-  const storedAdditionalCoverages = useSelector(state => state.coverage.additional);
-  const storedRiders = useSelector(state => state.coverage.riders);
-
-  // Initialize state with stored values
   const [productData, setProductDataState] = useState(storedProductData);
   const [baseCoverageData, setBaseCoverageDataState] = useState(storedBaseCoverageData);
   const [additionalCoverages, setAdditionalCoveragesState] = useState(
@@ -70,10 +78,9 @@ function Coverage({ applicationNumber, onStepComplete }) {
   );
   const [riders, setRidersState] = useState(storedRiders);
 
-  // Add new state for tracking attempted fields
   const [attemptedFields, setAttemptedFields] = useState({
-    additional: {}, // Will store attempted fields per coverage ID
-    riders: {} // Will store attempted fields per rider ID
+    additional: {},
+    riders: {}
   });
 
   const newCoverageRef = useRef(null);
@@ -90,22 +97,18 @@ function Coverage({ applicationNumber, onStepComplete }) {
   // Update local state and validate
   const handleProductDataChange = (newData) => {
     setProductDataState(newData);
-    validateAndUpdateSection('product', newData);
   };
 
   const handleBaseCoverageDataChange = (newData) => {
     setBaseCoverageDataState(newData);
-    // dispatch(setBaseCoverageData(newData));
   };
 
   const handleAdditionalCoveragesChange = (newData) => {
     setAdditionalCoveragesState(newData);
-    // dispatch(setAdditionalCoverages(newData));
   };
 
   const handleRidersChange = (newData) => {
     setRidersState(newData);
-    // dispatch(setRiders(newData));
   };
 
   const handleAddCoverage = () => {
@@ -274,13 +277,14 @@ function Coverage({ applicationNumber, onStepComplete }) {
     setShowErrors(true);
 
     // Get the section that needs to be completed first
-    const sections = ['product', 'base', 'additional', 'riders'];
+    const sections = ['base', 'additional', 'riders'];
     const currentIndex = sections.indexOf(sectionName);
     let sectionToValidate = sections[currentIndex - 1];
     // Validate the previous section and show errors
     switch (sectionToValidate) {
       case 'product':
-        validateAndUpdateSection('product', productData);
+        // validateAndUpdateSection('product', productData);
+        true;
         break;
       case 'base':
         validateAndUpdateSection('base', baseCoverageData);
@@ -323,7 +327,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   // Handle section expansion
   const handleSectionChange = (sectionId, sectionName) => async () => {
-    // If section is already expanded, collapse it
     if (expandedSections[sectionId] === sectionName) {
       setExpandedSections(prev => ({
         ...prev,
@@ -333,8 +336,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
       return;
     }
 
-    // Get the section that needs to be completed first
-    const sections = ['product', 'base', 'additional', 'riders'];
+    const sections = ['base', 'additional', 'riders'];
     const currentIndex = sections.indexOf(sectionName);
 
     // Validate all previous sections
@@ -342,9 +344,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
     for (let i = 0; i < currentIndex; i++) {
       const section = sections[i];
       switch (section) {
-        case 'product':
-          isValid = validateAndUpdateSection('product', productData);
-          break;
         case 'base':
           isValid = validateAndUpdateSection('base', baseCoverageData);
           break;
@@ -373,7 +372,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
       }
     }
 
-    // If we're expanding the base coverage section, save the product selection first
     if (sectionId === 'base' && sectionName === 'coverage') {
       try {
         if (productData.planGUID) {
@@ -382,7 +380,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
             planGUID: productData.planGUID
           }).unwrap();
 
-          // Save product data to Redux store
           dispatch(setProductData(productData));
 
           toast.success('Product selection saved successfully');
@@ -417,7 +414,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
       case 'product':
         const newProductData = { ...productData, [field]: value };
         handleProductDataChange(newProductData);
-        validateAndUpdateSection('product', newProductData);
         break;
       case 'base':
         const newBaseCoverageData = { ...baseCoverageData, [field]: value };
@@ -513,7 +509,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
   };
 
   useEffect(() => {
-    validateAndUpdateSection('product', productData);
     validateAndUpdateSection('base', baseCoverageData);
 
     const { isValid: additionalValid, errors: additionalErrors } =
@@ -621,6 +616,10 @@ function Coverage({ applicationNumber, onStepComplete }) {
         coverageData: enhancedBaseCoverageData
       }).unwrap();
 
+      dispatch(setBaseCoverageData(baseCoverageData));
+      dispatch(setAdditionalCoverages(additionalCoverages));
+      dispatch(setRiders(riders));
+
       dispatch(nextStep());
     } catch (error) {
       console.error('Error saving data:', error);
@@ -671,6 +670,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
     return selectedInsureds;
   };
 
+  // Auto-select first plan when product changes
   useEffect(() => {
     if (companyProducts.length > 0 && productData.product) {
       const selectedProduct = companyProducts.find(p => p.ProductName === productData.product);
@@ -678,11 +678,23 @@ function Coverage({ applicationNumber, onStepComplete }) {
         setProductDataState(prev => ({
           ...prev,
           productGUID: selectedProduct.ProductGUID,
-          planGUID: ''
+          planGUID: '',
+          // plan: ''
         }));
       }
     }
   }, [companyProducts, productData.product]);
+
+  useEffect(() => {
+    if (productPlans && productPlans.length > 0 && (!productData.plan || !productData.planGUID)) {
+      const firstPlan = productPlans[0];
+      setProductDataState(prev => ({
+        ...prev,
+        plan: firstPlan.PlanName,
+        planGUID: firstPlan.PlanGUID
+      }));
+    }
+  }, [productData]);
 
   useEffect(() => {
     if (productData.productGUID) {
@@ -692,7 +704,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   useEffect(() => {
     const isAllValid =
-      sectionValidation.product &&
       sectionValidation.base &&
       sectionValidation.additional &&
       sectionValidation.riders;
@@ -711,13 +722,13 @@ function Coverage({ applicationNumber, onStepComplete }) {
             title="Product Selector"
             isEnabled={true}
             isExpanded={expandedSections['product'] === 'selector' || expandedSections['product-selector']}
-            isValid={sectionValidation.product}
+            isValid={true}
             onExpand={handleSectionChange('product', 'selector')}
             onDisabledClick={() => handleDisabledSectionClick('product')}
             sectionName="selector"
             ownerId="product"
             expandedSections={expandedSections}
-            errors={formErrors.product}
+            errors={{}}
             showErrors={showErrors}
           >
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -725,7 +736,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
                 <InputLabel>Product</InputLabel>
                 <Select
                   value={productData.product}
-                  onChange={(e) => setProductDataState({ ...productData, product: e.target.value, plan: '' })}
+                  onChange={(e) => setProductDataState({ ...productData, product: e.target.value })}
                   label="Product"
                 >
                   {companyProducts.map(product => (
@@ -736,7 +747,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
                 </Select>
               </FormControl>
 
-              {productData.product && (
+              {productPlans.length > 0 && (
                 <FormControl fullWidth>
                   <InputLabel>Plan</InputLabel>
                   <Select
@@ -764,7 +775,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
           <CollapsibleSection
             title="Base Coverage"
-            isEnabled={sectionValidation.product}
+            isEnabled={true}
             isExpanded={expandedSections['base'] === 'coverage' || expandedSections['base-coverage']}
             isValid={sectionValidation.base}
             onExpand={handleSectionChange('base', 'coverage')}
