@@ -1,0 +1,98 @@
+{
+  "application": {
+    "PlanGUID": "PLAN-123456",
+    "ApplicationFormGUID": "APP-987654",
+    "roles": [
+      {
+        "RoleGUID": "ROLE-001",
+        "RoleCode": "Owner",
+        "client": {
+          "ClientGUID": "CLIENT-001",
+          "ClientName": "John Doe",
+          "CompanyName": null,
+          "Gender": "Male",
+          "Tobacco": "Non-Smoker",
+          "CountryCode": "US",
+          "StateCode": "CA",
+          "DateOfBirth": "1985-07-20",
+          "TypeCode": "01"
+        }
+      },
+      {
+        "RoleGUID": "ROLE-002",
+        "RoleCode": "Insured",
+        "client": {
+          "ClientGUID": "CLIENT-002",
+          "ClientName": "Jane Doe",
+          "CompanyName": null,
+          "Gender": "Female",
+          "Tobacco": "Smoker",
+          "CountryCode": "US",
+          "StateCode": "TX",
+          "DateOfBirth": "1990-02-15",
+          "TypeCode": "01"
+        }
+      }
+    ],
+    "coverages": [
+      {
+        "CoverageGUID": "COV-001",
+        "CoverageDefinitionGUID": "DEF-001",
+        "coveragedetails": {
+          "FaceAmount": 50000,
+          "TableRating": 100,
+          "PermFlat": 1000,
+          "TempFlat": 500,
+          "TempFlatDuration": 2,
+          "UWClass": "Standard"
+        },
+        "roles": [
+          {
+            "RoleGUID": "ROLE-002",
+            "RoleCode": "Insured",
+            "client": {
+              "ClientGUID": "CLIENT-002",
+              "ClientName": "Jane Doe",
+              "CompanyName": null,
+              "Gender": "Female",
+              "Tobacco": "Smoker",
+              "CountryCode": "US",
+              "StateCode": "TX",
+              "DateOfBirth": "1990-02-15",
+              "TypeCode": "01"
+            }
+          }
+        ]
+      },
+      {
+        "CoverageGUID": "COV-002",
+        "CoverageDefinitionGUID": "DEF-002",
+        "coveragedetails": {
+          "FaceAmount": 20000,
+          "TableRating": 125,
+          "PermFlat": 0,
+          "TempFlat": 250,
+          "TempFlatDuration": 1,
+          "UWClass": "Preferred"
+        },
+        "roles": [
+          {
+            "RoleGUID": "ROLE-002",
+            "RoleCode": "Insured",
+            "client": {
+              "ClientGUID": "CLIENT-002",
+              "ClientName": "Jane Doe",
+              "CompanyName": null,
+              "Gender": "Female",
+              "Tobacco": "Smoker",
+              "CountryCode": "US",
+              "StateCode": "TX",
+              "DateOfBirth": "1990-02-15",
+              "TypeCode": "01"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -7,6 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,8 +25,12 @@ public class CoverageService {
      * Save base coverage data
      */
     @Transactional
-    public void saveBaseCoverage(Map<String, Object> baseCoverageData, String applicationNumber) {
+    public Map<String, Object> saveBaseCoverage(Map<String, Object> baseCoverageData, String applicationNumber) {
         log.info("Saving base coverage for application: {}", baseCoverageData);
+        
+        // Create a result map to store all created GUIDs and data
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> insuredRoles = new ArrayList<>();
         
         // Get application form GUID
         String applicationFormGUID = getApplicationFormGUID(applicationNumber);
@@ -51,12 +58,28 @@ public class CoverageService {
         insertCoverage(coverageGUID, applicationFormGUID, coverageDefinitionGUID);
         
         // Handle insureds
-        handleInsureds(baseCoverageData, applicationFormGUID, coverageGUID);
+        Map<String, String> insuredRolesMap = handleInsureds(baseCoverageData, applicationFormGUID, coverageGUID);
         
         // Save all coverage details
         saveCoverageDetails(baseCoverageData, coverageGUID);
         
+        // Add created GUIDs to result map
+        result.put("coverageGUID", coverageGUID);
+        result.put("coverageDefinitionGUID", coverageDefinitionGUID);
+        result.put("applicationFormGUID", applicationFormGUID);
+        result.put("planGUID", planGUID);
+        
+        // Add insured roles to result
+        for (Map.Entry<String, String> entry : insuredRolesMap.entrySet()) {
+            Map<String, Object> roleInfo = new HashMap<>();
+            roleInfo.put("insuredId", entry.getKey());
+            roleInfo.put("roleGUID", entry.getValue());
+            insuredRoles.add(roleInfo);
+        }
+        result.put("insuredRoles", insuredRoles);
+        
         log.info("Base coverage saved successfully with CoverageGUID: {}", coverageGUID);
+        return result;
     }
     
     private String getApplicationFormGUID(String applicationNumber) {
@@ -92,7 +115,9 @@ public class CoverageService {
         );
     }
     
-    private void handleInsureds(Map<String, Object> baseCoverageData, String applicationFormGUID, String coverageGUID) {
+    private Map<String, String> handleInsureds(Map<String, Object> baseCoverageData, String applicationFormGUID, String coverageGUID) {
+        Map<String, String> insuredRolesMap = new HashMap<>();
+        
         // Handle first insured
         Object insured1Obj = baseCoverageData.get("insured1");
         Boolean insured1IsSameAsOwner = (Boolean) baseCoverageData.getOrDefault("insured1IsSameAsOwner", false);
@@ -107,15 +132,17 @@ public class CoverageService {
                 
                 if (clientGUID != null) {
                     // Insert role based on whether insured is same as owner or new
+                    String roleGUID;
                     if (Boolean.TRUE.equals(insured1IsSameAsOwner)) {
                         // For owner-insureds, insert role with ApplicationFormGUID as null
-                        insertOwnerInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
+                        roleGUID = insertOwnerInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
                         log.info("Insured 1 is same as owner, inserted role for ClientGUID: {}", clientGUID);
                     } else {
                         // For new insureds, insert role with ApplicationFormGUID value
-                        insertNewInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
+                        roleGUID = insertNewInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
                         log.info("Insured 1 is a new insured, inserted role for ClientGUID: {}", clientGUID);
                     }
+                    insuredRolesMap.put(insured1, roleGUID);
                 }
             }
         }
@@ -135,19 +162,23 @@ public class CoverageService {
                     
                     if (clientGUID != null) {
                         // Insert role based on whether insured is same as owner or new
+                        String roleGUID;
                         if (Boolean.TRUE.equals(insured2IsSameAsOwner)) {
                             // For owner-insureds, insert role with ApplicationFormGUID as null
-                            insertOwnerInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
+                            roleGUID = insertOwnerInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
                             log.info("Insured 2 is same as owner, inserted role for ClientGUID: {}", clientGUID);
                         } else {
                             // For new insureds, insert role with ApplicationFormGUID value
-                            insertNewInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
+                            roleGUID = insertNewInsuredRole(clientGUID, applicationFormGUID, coverageGUID);
                             log.info("Insured 2 is a new insured, inserted role for ClientGUID: {}", clientGUID);
                         }
+                        insuredRolesMap.put(insured2, roleGUID);
                     }
                 }
             }
         }
+        
+        return insuredRolesMap;
     }
     
     // Simplified method to just get the clientGUID directly
@@ -166,7 +197,7 @@ public class CoverageService {
     }
     
     // For insureds who are the same as owners
-    private void insertOwnerInsuredRole(String clientGUID, String applicationFormGUID, String coverageGUID) {
+    private String insertOwnerInsuredRole(String clientGUID, String applicationFormGUID, String coverageGUID) {
         String roleGUID = UUID.randomUUID().toString();
         jdbcTemplate.update(
             "INSERT INTO frrole (RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, CoverageGUID, IssueDate, StatusCode) " +
@@ -174,10 +205,11 @@ public class CoverageService {
             roleGUID, "02", clientGUID, null, coverageGUID, LocalDate.now(), "01"
         );
         log.info("Inserted owner-insured role for ClientGUID: {}", clientGUID);
+        return roleGUID;
     }
     
     // For new insureds who are not owners
-    private void insertNewInsuredRole(String clientGUID, String applicationFormGUID, String coverageGUID) {
+    private String insertNewInsuredRole(String clientGUID, String applicationFormGUID, String coverageGUID) {
         String roleGUID = UUID.randomUUID().toString();
         jdbcTemplate.update(
             "INSERT INTO frrole (RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, CoverageGUID, IssueDate, StatusCode) " +
@@ -185,6 +217,7 @@ public class CoverageService {
             roleGUID, "02", clientGUID, applicationFormGUID, coverageGUID, LocalDate.now(), "01"
         );
         log.info("Inserted new insured role for ClientGUID: {}", clientGUID);
+        return roleGUID;
     }
     
     private void saveCoverageDetails(Map<String, Object> baseCoverageData, String coverageGUID) {

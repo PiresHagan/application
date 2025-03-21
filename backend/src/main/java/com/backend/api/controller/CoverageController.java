@@ -18,11 +18,11 @@ public class CoverageController {
     private CoverageService coverageService;
     
     @PostMapping("/base/{applicationNumber}")
-    public ResponseEntity<Void> saveBaseCoverage(
+    public ResponseEntity<Map<String, Object>> saveBaseCoverage(
             @PathVariable String applicationNumber,
             @RequestBody Map<String, Object> baseCoverageData) {
         log.info("Received request to save base coverage for application: {}", applicationNumber);
-        coverageService.saveBaseCoverage(baseCoverageData, applicationNumber);
-        return ResponseEntity.ok().build();
+        Map<String, Object> savedData = coverageService.saveBaseCoverage(baseCoverageData, applicationNumber);
+        return ResponseEntity.ok(savedData);
     }
 } 

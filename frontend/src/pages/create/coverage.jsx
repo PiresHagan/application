@@ -26,6 +26,8 @@ import {
   setAdditionalCoverages,
   setRiders
 } from '../../slices/coverageSlice';
+import { handleCoverageChange } from '../../utils/premiumCalculation';
+import { calculatePremium } from '../../slices/premiumSlice';
 
 function Coverage({ applicationNumber, onStepComplete }) {
   const dispatch = useDispatch();
@@ -611,14 +613,52 @@ function Coverage({ applicationNumber, onStepComplete }) {
       }
 
       // Save the base coverage data with the enhanced information
-      await saveBaseCoverage({
+      const response = await saveBaseCoverage({
         applicationNumber,
         coverageData: enhancedBaseCoverageData
       }).unwrap();
 
-      dispatch(setBaseCoverageData(baseCoverageData));
+      // Store the response data in the Redux store
+      // This contains all the GUIDs (coverageGUID, insuredRoles, etc.)
+      dispatch(setBaseCoverageData({
+        ...baseCoverageData,
+        coverageGUID: response.coverageGUID,
+        coverageDefinitionGUID: response.coverageDefinitionGUID,
+        insuredRoles: response.insuredRoles || []
+      }));
+
       dispatch(setAdditionalCoverages(additionalCoverages));
       dispatch(setRiders(riders));
+
+      // After saving, trigger a premium calculation with the exact GUIDs from the backend
+      if (response.coverageGUID) {
+        const state = {
+          coverage: {
+            product: {
+              ...productData,
+              planGUID: response.planGUID || productData.planGUID
+            },
+            base: {
+              ...baseCoverageData,
+              coverageGUID: response.coverageGUID,
+              coverageDefinitionGUID: response.coverageDefinitionGUID,
+              insuredRoles: response.insuredRoles || []
+            },
+            additional: additionalCoverages,
+            riders: riders
+          },
+          coverageOwners: {
+            owners: owners
+          }
+        };
+        
+        handleCoverageChange(
+          state, 
+          sectionValidation, 
+          applicationNumber,
+          (requestData) => dispatch(calculatePremium(requestData))
+        );
+      }
 
       dispatch(nextStep());
     } catch (error) {
@@ -713,6 +753,77 @@ function Coverage({ applicationNumber, onStepComplete }) {
     }
 
   }, [sectionValidation, onStepComplete]);
+
+  // Add effect to trigger premium calculation when relevant data changes
+  useEffect(() => {
+    // Only trigger premium calculation if base coverage is valid
+    if (sectionValidation.base) {
+      // Use the current state with any stored GUIDs
+      const state = {
+        coverage: {
+          product: productData,
+          base: baseCoverageData,
+          additional: additionalCoverages,
+          riders: riders
+        },
+        coverageOwners: {
+          owners: owners
+        }
+      };
+      
+      handleCoverageChange(
+        state, 
+        sectionValidation, 
+        applicationNumber,
+        (requestData) => dispatch(calculatePremium(requestData))
+      );
+    }
+  }, [
+    sectionValidation.base, 
+    productData.planGUID,
+    baseCoverageData.faceAmount,
+    baseCoverageData.insured1,
+    baseCoverageData.insured2,
+    baseCoverageData.underwritingClass,
+    baseCoverageData.coverageType,
+    baseCoverageData.tableRating,
+    // Include any stored GUIDs in the dependency array
+    baseCoverageData.coverageGUID,
+    baseCoverageData.coverageDefinitionGUID,
+    JSON.stringify(baseCoverageData.insuredRoles),
+    JSON.stringify(additionalCoverages),
+    JSON.stringify(riders),
+    dispatch,
+    applicationNumber
+  ]);
+  
+  // Initial premium calculation when the component is mounted and data is valid
+  useEffect(() => {
+    if (sectionValidation.base && 
+        baseCoverageData.faceAmount && 
+        baseCoverageData.insured1 && 
+        productData.planGUID) {
+      
+      const state = {
+        coverage: {
+          product: productData,
+          base: baseCoverageData,
+          additional: additionalCoverages,
+          riders: riders
+        },
+        coverageOwners: {
+          owners: owners
+        }
+      };
+      
+      handleCoverageChange(
+        state, 
+        sectionValidation, 
+        applicationNumber,
+        (requestData) => dispatch(calculatePremium(requestData))
+      );
+    }
+  }, []);
 
   return (
     <Box sx={{ pb: 3 }}>

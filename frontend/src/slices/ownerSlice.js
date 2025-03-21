@@ -23,7 +23,10 @@ const ownerSlice = createSlice({
   },
   reducers: {
     setOwners: (state, action) => {
-      state.owners = action.payload;
+      state.owners = action.payload.map(owner => ({
+        ...owner,
+        roleGUID: owner.roleGUID || undefined
+      }));
     },
     setExpandedSections: (state, action) => {
       state.expandedSections = action.payload;

@@ -51,6 +51,7 @@ export const createApiSlice = apiSlice.injectEndpoints({
         method: 'POST',
         body: coverageData,
       }),
+      invalidatesTags: ['ApplicationData', 'FormOwners'],
     }),
   }),
 });
