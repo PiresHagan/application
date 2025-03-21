@@ -19,6 +19,8 @@ public class FormService {
         String sql = """
             SELECT 
                 c.ClientGUID,
+                r.RoleGUID,
+                r.RoleCode,
                 CONCAT(c.FirstName, ' ', c.LastName, ' - ', 
                     CASE c.Gender 
                         WHEN 'male' THEN 'Male'
@@ -38,7 +40,7 @@ public class FormService {
                 c.CountryCode,
                 c.StateCode,
                 c.SSN
-            FROM frRole r
+            FROM frrole r
             JOIN frclient c ON c.ClientGUID = r.ClientGUID
             JOIN frapplicationform f ON f.ApplicationFormGUID = r.ApplicationFormGUID
             WHERE f.ApplicationFormNumber = ?
@@ -51,6 +53,8 @@ public class FormService {
             (rs, rowNum) -> {
                 OwnerListResponse owner = new OwnerListResponse();
                 owner.setClientGUID(rs.getString("ClientGUID"));
+                owner.setRoleGUID(rs.getString("RoleGUID"));
+                owner.setRoleCode(rs.getString("RoleCode"));
                 owner.setOwnerName(rs.getString("ownerName"));
                 owner.setFirstName(rs.getString("FirstName"));
                 owner.setLastName(rs.getString("LastName"));

@@ -671,6 +671,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
     if (formOwners) {
       dispatch(setCoverageOwners(formOwners.map(owner => ({
         clientGUID: owner.clientGUID,
+        roleGUID: owner.roleGUID,
+        roleCode: owner.roleCode,
         id: owner.id,
         firstName: owner.firstName,
         lastName: owner.lastName,

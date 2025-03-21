@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class OwnerListResponse {
     private String clientGUID;
+    private String roleGUID;
+    private String roleCode;
     private String ownerName;
     private String firstName;
     private String lastName;

@@ -96,7 +96,7 @@ const mapCoverage = (coverage, type, index, owners) => {
       if (roleInsured) {
         roles.push({
           RoleGUID: role.roleGUID,
-          RoleCode: "Insured",
+          RoleCode: roleInsured.roleCode || role.roleCode || '01',
           client: mapClientFromInsured(roleInsured)
         });
       }
@@ -105,16 +105,16 @@ const mapCoverage = (coverage, type, index, owners) => {
     // Fallback to generating roles if we don't have stored GUIDs
     if (insured1) {
       roles.push({
-        RoleGUID: `ROLE-${insured1.id}`,
-        RoleCode: "Insured",
+        RoleGUID: insured1.roleGUID || `ROLE-${insured1.id}`,
+        RoleCode: insured1.roleCode || "01",
         client: mapClientFromInsured(insured1)
       });
     }
     
     if (insured2) {
       roles.push({
-        RoleGUID: `ROLE-${insured2.id}`,
-        RoleCode: "Insured",
+        RoleGUID: insured2.roleGUID || `ROLE-${insured2.id}`,
+        RoleCode: insured2.roleCode || "01",
         client: mapClientFromInsured(insured2)
       });
     }
@@ -156,7 +156,7 @@ const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCovera
     .filter(owner => owner.ownerType === '01') // Filter individual owners
     .map(owner => ({
       RoleGUID: owner.roleGUID || `ROLE-${owner.id}`, // Use actual roleGUID if available
-      RoleCode: "Owner",
+      RoleCode: owner.roleCode || '01',
       client: mapClientFromInsured(owner)
     }));
 
