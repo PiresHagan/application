@@ -37,6 +37,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const { data: formOwners, isLoading } = useGetFormOwnersQuery(applicationNumber);
   const mainOwners = useSelector(state => state.owner.owners);
   const coverageOwners = useSelector(state => state.coverageOwners.owners);
+  const premiumLoading = useSelector(state => state.premium?.loading);
 
   const storedProductData = useSelector(state => state.coverage.product);
   const storedBaseCoverageData = useSelector(state => state.coverage.base || {});
@@ -87,7 +88,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   const newCoverageRef = useRef(null);
 
-  // Add new queries for products and plans
   const { data: companyProducts = [] } = useGetCompanyProductsQuery('DEV Insurance');
   const { data: productPlans = [], refetch: refetchPlans } = useGetProductPlansQuery(
     productData.productGUID || '',
@@ -96,7 +96,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const [updateApplicationPlan] = useUpdateApplicationPlanMutation();
   const [saveBaseCoverage] = useSaveBaseCoverageMutation();
 
-  // Update local state and validate
   const handleProductDataChange = (newData) => {
     setProductDataState(newData);
   };
@@ -282,10 +281,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
     const sections = ['base', 'additional', 'riders'];
     const currentIndex = sections.indexOf(sectionName);
     let sectionToValidate = sections[currentIndex - 1];
-    // Validate the previous section and show errors
     switch (sectionToValidate) {
       case 'product':
-        // validateAndUpdateSection('product', productData);
         true;
         break;
       case 'base':
@@ -306,8 +303,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
         }));
         break;
     }
-
-    toast.error('Please complete the previous section first');
   };
 
   // Validate section and update validation state
@@ -578,22 +573,15 @@ function Coverage({ applicationNumber, onStepComplete }) {
     }
 
     try {
-      // We use an enhanced version of the baseCoverageData that includes owner information
       const enhancedBaseCoverageData = { ...baseCoverageData, planGUID: productData.planGUID };
 
-      // Function to check if an insured is the same as an owner (has matching SSN)
       const isInsuredSameAsOwner = (insuredId) => {
         const insured = owners.find(owner => owner.id === insuredId);
         if (!insured || !insured.ssn) return false;
 
-        // An insured is considered the same as an owner when the SSN matches
-        // This determines how we'll save the insured in the backend:
-        // - If true: The insured will use a role with ApplicationFormGUID = null 
-        // - If false: The insured will use a role with the ApplicationFormGUID value
         return mainOwners.some(owner => owner.ssn === insured.ssn);
       };
 
-      // Add information about which insureds are the same as owners
       if (enhancedBaseCoverageData.insured1) {
         enhancedBaseCoverageData.insured1IsSameAsOwner = isInsuredSameAsOwner(enhancedBaseCoverageData.insured1);
       }
@@ -604,7 +592,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
       console.log('Saving base coverage with data:', enhancedBaseCoverageData);
 
-      // Save the product data first if needed
       if (productData.planGUID) {
         await updateApplicationPlan({
           applicationNumber,
@@ -612,14 +599,11 @@ function Coverage({ applicationNumber, onStepComplete }) {
         }).unwrap();
       }
 
-      // Save the base coverage data with the enhanced information
       const response = await saveBaseCoverage({
         applicationNumber,
         coverageData: enhancedBaseCoverageData
       }).unwrap();
 
-      // Store the response data in the Redux store
-      // This contains all the GUIDs (coverageGUID, insuredRoles, etc.)
       dispatch(setBaseCoverageData({
         ...baseCoverageData,
         coverageGUID: response.coverageGUID,
@@ -630,7 +614,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
       dispatch(setAdditionalCoverages(additionalCoverages));
       dispatch(setRiders(riders));
 
-      // After saving, trigger a premium calculation with the exact GUIDs from the backend
       if (response.coverageGUID) {
         const state = {
           coverage: {
@@ -712,7 +695,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
     return selectedInsureds;
   };
 
-  // Auto-select first plan when product changes
   useEffect(() => {
     if (companyProducts.length > 0 && productData.product) {
       const selectedProduct = companyProducts.find(p => p.ProductName === productData.product);
@@ -720,8 +702,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
         setProductDataState(prev => ({
           ...prev,
           productGUID: selectedProduct.ProductGUID,
-          planGUID: '',
-          // plan: ''
+          planGUID: ''
         }));
       }
     }
@@ -756,11 +737,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   }, [sectionValidation, onStepComplete]);
 
-  // Add effect to trigger premium calculation when relevant data changes
   useEffect(() => {
-    // Only trigger premium calculation if base coverage is valid
     if (sectionValidation.base) {
-      // Use the current state with any stored GUIDs
       const state = {
         coverage: {
           product: productData,
@@ -789,7 +767,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
     baseCoverageData.underwritingClass,
     baseCoverageData.coverageType,
     baseCoverageData.tableRating,
-    // Include any stored GUIDs in the dependency array
     baseCoverageData.coverageGUID,
     baseCoverageData.coverageDefinitionGUID,
     JSON.stringify(baseCoverageData.insuredRoles),
@@ -799,7 +776,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
     applicationNumber
   ]);
   
-  // Initial premium calculation when the component is mounted and data is valid
   useEffect(() => {
     if (sectionValidation.base && 
         baseCoverageData.faceAmount && 
@@ -833,7 +809,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
         <Grid item xs={12} md={8.4}>
           <CollapsibleSection
             title="Product Selector"
-            isEnabled={true}
+            isEnabled={!premiumLoading}
             isExpanded={expandedSections['product'] === 'selector' || expandedSections['product-selector']}
             isValid={true}
             onExpand={handleSectionChange('product', 'selector')}
@@ -888,7 +864,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
           <CollapsibleSection
             title="Base Coverage"
-            isEnabled={true}
+            isEnabled={!premiumLoading}
             isExpanded={expandedSections['base'] === 'coverage' || expandedSections['base-coverage']}
             isValid={sectionValidation.base}
             onExpand={handleSectionChange('base', 'coverage')}
@@ -928,7 +904,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
           <CollapsibleSection
             title="Additional Coverage(s)"
-            isEnabled={sectionValidation.base}
+            isEnabled={sectionValidation.base && !premiumLoading}
             isExpanded={expandedSections['additional'] === 'coverage' || expandedSections['additional-coverage']}
             isValid={sectionValidation.additional}
             onExpand={handleSectionChange('additional', 'coverage')}
@@ -958,7 +934,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
           <CollapsibleSection
             title="Riders"
-            isEnabled={sectionValidation.additional && sectionValidation.base}
+            isEnabled={sectionValidation.additional && sectionValidation.base && !premiumLoading}
             isExpanded={expandedSections['riders'] === 'section' || expandedSections['riders-section']}
             isValid={sectionValidation.riders}
             onExpand={handleSectionChange('riders', 'section')}
