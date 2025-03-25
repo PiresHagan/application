@@ -2,12 +2,7 @@ import React from 'react';
 import { Box, Paper, Typography, Divider, CircularProgress } from '@mui/material';
 import { useSelector } from 'react-redux';
 
-/**
- * Premium Section displays the calculated premium details
- * This component shows the premium calculation results from the premium calculation API
- */
 const PremiumSection = () => {
-  // Get premium data from redux store
   const premiumData = useSelector(state => state.premium?.data);
   const loading = useSelector(state => state.premium?.loading);
   const error = useSelector(state => state.premium?.error);
@@ -48,7 +43,6 @@ const PremiumSection = () => {
     );
   }
 
-  // Example premium data structure - adjust according to your actual API response
   return (
     <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
       <Typography variant="h6" gutterBottom>Premium Calculation</Typography>
@@ -140,4 +134,4 @@ const PremiumSection = () => {
   );
 };
 
-export default PremiumSection; 
+export default PremiumSection;

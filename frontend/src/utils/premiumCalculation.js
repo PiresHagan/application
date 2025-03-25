@@ -23,10 +23,8 @@ export const handleCoverageChange = (state, sectionValidation, applicationNumber
     return;
   }
 
-  // Create the premium calculation request
   const calcRequest = createPremiumCalcRequest(state, applicationNumber);
   
-  // If the request is valid, trigger calculation
   if (calcRequest) {
     calculatePremiumCallback(calcRequest);
   }
@@ -36,7 +34,7 @@ export const handleCoverageChange = (state, sectionValidation, applicationNumber
  * 
  * // In component after a field changes and validation occurs:
  * useEffect(() => {
- *   // After field changes and validation completes
+ *   
  *   handleCoverageChange(
  *     reduxState,
  *     sectionValidation,

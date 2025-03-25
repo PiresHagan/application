@@ -1,9 +1,4 @@
 /**
- * Builds a Premium Calculation Request based on the coverage page data
- * This function formats the data according to the required structure for the premium calculation API
- */
-
-/**
  * Validates if the coverage data is ready for premium calculation
  * @param {Object} productData - Product data from the coverage page
  * @param {Object} baseCoverageData - Base coverage data
@@ -88,9 +83,7 @@ const mapCoverage = (coverage, type, index, owners) => {
   
   const roles = [];
   
-  // Check if we have stored insuredRoles from the backend
   if (coverage.insuredRoles && coverage.insuredRoles.length > 0) {
-    // Use the actual role GUIDs returned from the backend
     coverage.insuredRoles.forEach(role => {
       const roleInsured = owners.find(owner => owner.id.toString() === role.insuredId.toString());
       if (roleInsured) {
@@ -102,7 +95,6 @@ const mapCoverage = (coverage, type, index, owners) => {
       }
     });
   } else {
-    // Fallback to generating roles if we don't have stored GUIDs
     if (insured1) {
       roles.push({
         RoleGUID: insured1.roleGUID || `ROLE-${insured1.id}`,
@@ -146,32 +138,26 @@ const mapCoverage = (coverage, type, index, owners) => {
  * @returns {Object|null} - The JSON request or null if data is invalid
  */
 const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCoverages, riders, owners, applicationNumber) => {
-  // Validate data first
   if (!isDataValidForCalculation(productData, baseCoverageData, additionalCoverages, riders, owners)) {
     return null;
   }
 
-  // Map the owner roles
   const ownerRoles = owners
-    .filter(owner => owner.ownerType === '01') // Filter individual owners
+    .filter(owner => owner.ownerType === '01')
     .map(owner => ({
-      RoleGUID: owner.roleGUID || `ROLE-${owner.id}`, // Use actual roleGUID if available
+      RoleGUID: owner.roleGUID || `ROLE-${owner.id}`,
       RoleCode: owner.roleCode || '01',
       client: mapClientFromInsured(owner)
     }));
 
-  // Map base coverage
   const baseCoverage = mapCoverage(baseCoverageData, 'base', 1, owners);
   
-  // Map additional coverages
   const mappedAdditionalCoverages = additionalCoverages.map((coverage, index) => 
     mapCoverage(coverage, 'additional', index + 1, owners)
   );
   
-  // Combine all coverages
   const allCoverages = [baseCoverage, ...mappedAdditionalCoverages];
   
-  // Build the full request
   const request = {
     application: {
       PlanGUID: productData.planGUID,
