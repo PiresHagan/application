@@ -55,12 +55,16 @@ const premiumSlice = createSlice({
     data: null,
     loading: false,
     error: null,
-    lastCalculated: null
+    lastCalculated: null,
+    isOutdated: false
   },
   reducers: {
     clearPremium: (state) => {
       state.data = null;
       state.error = null;
+    },
+    markPremiumOutdated: (state) => {
+      state.isOutdated = true;
     }
   },
   extraReducers: (builder) => {
@@ -73,6 +77,7 @@ const premiumSlice = createSlice({
         state.loading = false;
         state.data = action.payload;
         state.lastCalculated = new Date().toISOString();
+        state.isOutdated = false;
       })
       .addCase(calculatePremium.rejected, (state, action) => {
         state.loading = false;
@@ -81,6 +86,6 @@ const premiumSlice = createSlice({
   }
 });
 
-export const { clearPremium } = premiumSlice.actions;
+export const { clearPremium, markPremiumOutdated } = premiumSlice.actions;
 
 export default premiumSlice.reducer; 

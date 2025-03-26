@@ -9,7 +9,7 @@ const initialState = {
   },
   base: {
     coverageType: 'single',
-    insured1: '',
+    insured1: '1',
     insured2: '',
     sameAsOwner1: false,
     sameAsOwner2: false,

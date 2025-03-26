@@ -19,12 +19,10 @@ const isDataValidForCalculation = (productData, baseCoverageData, additionalCove
       !baseCoverageData.underwritingClass) {
     return false;
   }
-
   // For joint coverage, insured2 must be present
   if (baseCoverageData.coverageType === 'joint' && !baseCoverageData.insured2) {
     return false;
   }
-
   // Check if additional coverages are valid
   const isAdditionalCoveragesValid = additionalCoverages.every(coverage => 
     coverage.insured1 && 
@@ -35,13 +33,11 @@ const isDataValidForCalculation = (productData, baseCoverageData, additionalCove
   if (!isAdditionalCoveragesValid && additionalCoverages.length > 0) {
     return false;
   }
-
   // Check if riders are valid
   const isRidersValid = riders.every(rider => 
     rider.type && 
     rider.selectedPerson
   );
-
   if (!isRidersValid && riders.length > 0) {
     return false;
   }
@@ -161,7 +157,7 @@ const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCovera
   const request = {
     application: {
       PlanGUID: productData.planGUID,
-      ApplicationFormGUID: applicationNumber || 'APP-DEFAULT',
+      ApplicationFormGUID: applicationNumber || 'APP-000000',
       roles: ownerRoles,
       coverages: allCoverages
     }
@@ -174,14 +170,42 @@ const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCovera
  * Creates a premium calculation request if the data is valid
  * @param {Object} state - The Redux state with coverage data
  * @param {string} applicationNumber - The application number
+ * @param {boolean} forceInitialCalculation - Whether to force initial calculation
  * @returns {Object|null} - The JSON request or null if data is invalid
  */
-export const createPremiumCalcRequest = (state, applicationNumber) => {
+export const createPremiumCalcRequest = (state, applicationNumber, forceInitialCalculation = false) => {
   const productData = state.coverage.product;
   const baseCoverageData = state.coverage.base;
   const additionalCoverages = state.coverage.additional || [];
   const riders = state.coverage.riders || [];
   const owners = state.coverageOwners.owners || [];
+  
+  // If forceInitialCalculation is true, we'll create a basic valid request even if data isn't perfect
+  if (forceInitialCalculation) {
+    // Create a minimal valid request with default values where needed
+    const enhancedProductData = {
+      ...productData,
+      planGUID: productData.planGUID || 'DEFAULT-PLAN-GUID'
+    };
+    
+    const enhancedBaseCoverageData = {
+      ...baseCoverageData,
+      faceAmount: baseCoverageData.faceAmount || '100000',
+      insured1: baseCoverageData.insured1 || '1',
+      underwritingClass: baseCoverageData.underwritingClass || 'Standard'
+    };
+    
+    return buildPremiumCalcRequest(
+      enhancedProductData,
+      enhancedBaseCoverageData,
+      additionalCoverages,
+      riders,
+      owners,
+      applicationNumber
+    );
+  }
+
+  console.log('baseCoverageData', baseCoverageData);
   
   return buildPremiumCalcRequest(
     productData,

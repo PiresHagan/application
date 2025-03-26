@@ -28,6 +28,7 @@ import {
 } from '../../slices/coverageSlice';
 import { handleCoverageChange } from '../../utils/premiumCalculation';
 import { calculatePremium } from '../../slices/premiumSlice';
+import createPremiumCalcRequest from '../../utils/buildPremiumCalcRequest';
 
 function Coverage({ applicationNumber, onStepComplete }) {
   const dispatch = useDispatch();
@@ -37,7 +38,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const { data: formOwners, isLoading } = useGetFormOwnersQuery(applicationNumber);
   const mainOwners = useSelector(state => state.owner.owners);
   const coverageOwners = useSelector(state => state.coverageOwners.owners);
-  const premiumLoading = useSelector(state => state.premium?.loading);
+  const isPremiumOutdated = useSelector(state => state.premium?.isOutdated);
 
   const storedProductData = useSelector(state => state.coverage.product);
   const storedBaseCoverageData = useSelector(state => state.coverage.base || {});
@@ -88,6 +89,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   const newCoverageRef = useRef(null);
 
+  // Add new queries for products and plans
   const { data: companyProducts = [] } = useGetCompanyProductsQuery('DEV Insurance');
   const { data: productPlans = [], refetch: refetchPlans } = useGetProductPlansQuery(
     productData.productGUID || '',
@@ -101,6 +103,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
   };
 
   const handleBaseCoverageDataChange = (newData) => {
+    console.log('newData', newData);
     setBaseCoverageDataState(newData);
   };
 
@@ -281,8 +284,10 @@ function Coverage({ applicationNumber, onStepComplete }) {
     const sections = ['base', 'additional', 'riders'];
     const currentIndex = sections.indexOf(sectionName);
     let sectionToValidate = sections[currentIndex - 1];
+    // Validate the previous section and show errors
     switch (sectionToValidate) {
       case 'product':
+        // validateAndUpdateSection('product', productData);
         true;
         break;
       case 'base':
@@ -303,6 +308,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
         }));
         break;
     }
+
+    toast.error('Please complete the previous section first');
   };
 
   // Validate section and update validation state
@@ -554,8 +561,77 @@ function Coverage({ applicationNumber, onStepComplete }) {
     }
   }, [owners, baseCoverageData, handleBaseCoverageDataChange, validateAndUpdateSection]);
 
+  // Add effect to mark premium as outdated when relevant data changes
+  useEffect(() => {
+    // Only mark premium as outdated if base coverage is valid
+    if (sectionValidation.base) {
+      // Use the current state with any stored GUIDs
+      const state = {
+        coverage: {
+          product: productData,
+          base: baseCoverageData,
+          additional: additionalCoverages,
+          riders: riders
+        },
+        coverageOwners: {
+          owners: owners
+        }
+      };
+      
+      // Pass dispatch directly to just mark as outdated instead of triggering calculation
+      handleCoverageChange(
+        state, 
+        sectionValidation, 
+        applicationNumber,
+        dispatch
+      );
+    }
+  }, [
+    sectionValidation.base, 
+    productData.planGUID,
+    baseCoverageData.faceAmount,
+    baseCoverageData.insured1,
+    baseCoverageData.insured2,
+    baseCoverageData.underwritingClass,
+    baseCoverageData.coverageType,
+    baseCoverageData.tableRating,
+    // Include any stored GUIDs in the dependency array
+    baseCoverageData.coverageGUID,
+    baseCoverageData.coverageDefinitionGUID,
+    JSON.stringify(baseCoverageData.insuredRoles),
+    JSON.stringify(additionalCoverages),
+    JSON.stringify(riders),
+    dispatch,
+    applicationNumber
+  ]);
+  
+  useEffect(() => {
+    const state = {
+      coverage: {
+        product: productData,
+        base: baseCoverageData,
+        additional: additionalCoverages,
+        riders: riders
+      },
+      coverageOwners: {
+        owners: owners
+      }
+    };
+    
+    const calcRequest = createPremiumCalcRequest(state, applicationNumber, true);
+    if (calcRequest) {
+      dispatch(calculatePremium(calcRequest));
+    }
+  }, []);
+
   const handleSaveAndContinue = async () => {
     setShowErrors(true);
+
+    // Check if premium calculation is outdated
+    if (isPremiumOutdated) {
+      toast.error('Please refresh the premium calculation before proceeding');
+      return;
+    }
 
     const { isValid: additionalValid, errors: additionalErrors } =
       validateAllAdditionalCoverages(additionalCoverages, {});
@@ -573,8 +649,10 @@ function Coverage({ applicationNumber, onStepComplete }) {
     }
 
     try {
+      // We use an enhanced version of the baseCoverageData that includes owner information
       const enhancedBaseCoverageData = { ...baseCoverageData, planGUID: productData.planGUID };
 
+      // Function to check if an insured is the same as an owner (has matching SSN)
       const isInsuredSameAsOwner = (insuredId) => {
         const insured = owners.find(owner => owner.id === insuredId);
         if (!insured || !insured.ssn) return false;
@@ -582,6 +660,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
         return mainOwners.some(owner => owner.ssn === insured.ssn);
       };
 
+      // Add information about which insureds are the same as owners
       if (enhancedBaseCoverageData.insured1) {
         enhancedBaseCoverageData.insured1IsSameAsOwner = isInsuredSameAsOwner(enhancedBaseCoverageData.insured1);
       }
@@ -592,6 +671,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
       console.log('Saving base coverage with data:', enhancedBaseCoverageData);
 
+      // Save the product data first if needed
       if (productData.planGUID) {
         await updateApplicationPlan({
           applicationNumber,
@@ -599,11 +679,14 @@ function Coverage({ applicationNumber, onStepComplete }) {
         }).unwrap();
       }
 
+      // Save the base coverage data with the enhanced information
       const response = await saveBaseCoverage({
         applicationNumber,
         coverageData: enhancedBaseCoverageData
       }).unwrap();
 
+      // Store the response data in the Redux store
+      // This contains all the GUIDs (coverageGUID, insuredRoles, etc.)
       dispatch(setBaseCoverageData({
         ...baseCoverageData,
         coverageGUID: response.coverageGUID,
@@ -614,6 +697,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
       dispatch(setAdditionalCoverages(additionalCoverages));
       dispatch(setRiders(riders));
 
+      // After saving, trigger a premium calculation with the exact GUIDs from the backend
       if (response.coverageGUID) {
         const state = {
           coverage: {
@@ -695,6 +779,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
     return selectedInsureds;
   };
 
+  // Auto-select first plan when product changes
   useEffect(() => {
     if (companyProducts.length > 0 && productData.product) {
       const selectedProduct = companyProducts.find(p => p.ProductName === productData.product);
@@ -702,7 +787,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
         setProductDataState(prev => ({
           ...prev,
           productGUID: selectedProduct.ProductGUID,
-          planGUID: ''
+          planGUID: '',
+          // plan: ''
         }));
       }
     }
@@ -737,71 +823,27 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   }, [sectionValidation, onStepComplete]);
 
-  useEffect(() => {
-    if (sectionValidation.base) {
-      const state = {
-        coverage: {
-          product: productData,
-          base: baseCoverageData,
-          additional: additionalCoverages,
-          riders: riders
-        },
-        coverageOwners: {
-          owners: owners
-        }
-      };
-      
-      handleCoverageChange(
-        state, 
-        sectionValidation, 
-        applicationNumber,
-        (requestData) => dispatch(calculatePremium(requestData))
-      );
+  // Function to handle premium calculation refresh with current form data
+  const handlePremiumRefresh = () => {
+    // Use current component state (not Redux store) to build the calculation request
+    const currentState = {
+      coverage: {
+        product: productData,
+        base: baseCoverageData,
+        additional: additionalCoverages,
+        riders: riders
+      },
+      coverageOwners: {
+        owners: owners
+      }
+    };
+    
+    // Create and dispatch calculation request with current form data
+    const calcRequest = createPremiumCalcRequest(currentState, applicationNumber);
+    if (calcRequest) {
+      dispatch(calculatePremium(calcRequest));
     }
-  }, [
-    sectionValidation.base, 
-    productData.planGUID,
-    baseCoverageData.faceAmount,
-    baseCoverageData.insured1,
-    baseCoverageData.insured2,
-    baseCoverageData.underwritingClass,
-    baseCoverageData.coverageType,
-    baseCoverageData.tableRating,
-    baseCoverageData.coverageGUID,
-    baseCoverageData.coverageDefinitionGUID,
-    JSON.stringify(baseCoverageData.insuredRoles),
-    JSON.stringify(additionalCoverages),
-    JSON.stringify(riders),
-    dispatch,
-    applicationNumber
-  ]);
-  
-  useEffect(() => {
-    if (sectionValidation.base && 
-        baseCoverageData.faceAmount && 
-        baseCoverageData.insured1 && 
-        productData.planGUID) {
-      
-      const state = {
-        coverage: {
-          product: productData,
-          base: baseCoverageData,
-          additional: additionalCoverages,
-          riders: riders
-        },
-        coverageOwners: {
-          owners: owners
-        }
-      };
-      
-      handleCoverageChange(
-        state, 
-        sectionValidation, 
-        applicationNumber,
-        (requestData) => dispatch(calculatePremium(requestData))
-      );
-    }
-  }, []);
+  };
 
   return (
     <Box sx={{ pb: 3 }}>
@@ -809,7 +851,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
         <Grid item xs={12} md={8.4}>
           <CollapsibleSection
             title="Product Selector"
-            isEnabled={!premiumLoading}
+            isEnabled={true}
             isExpanded={expandedSections['product'] === 'selector' || expandedSections['product-selector']}
             isValid={true}
             onExpand={handleSectionChange('product', 'selector')}
@@ -864,7 +906,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
           <CollapsibleSection
             title="Base Coverage"
-            isEnabled={!premiumLoading}
+            isEnabled={true}
             isExpanded={expandedSections['base'] === 'coverage' || expandedSections['base-coverage']}
             isValid={sectionValidation.base}
             onExpand={handleSectionChange('base', 'coverage')}
@@ -904,7 +946,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
           <CollapsibleSection
             title="Additional Coverage(s)"
-            isEnabled={sectionValidation.base && !premiumLoading}
+            isEnabled={sectionValidation.base}
             isExpanded={expandedSections['additional'] === 'coverage' || expandedSections['additional-coverage']}
             isValid={sectionValidation.additional}
             onExpand={handleSectionChange('additional', 'coverage')}
@@ -934,7 +976,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
           <CollapsibleSection
             title="Riders"
-            isEnabled={sectionValidation.additional && sectionValidation.base && !premiumLoading}
+            isEnabled={sectionValidation.additional && sectionValidation.base}
             isExpanded={expandedSections['riders'] === 'section' || expandedSections['riders-section']}
             isValid={sectionValidation.riders}
             onExpand={handleSectionChange('riders', 'section')}
@@ -971,15 +1013,28 @@ function Coverage({ applicationNumber, onStepComplete }) {
             <Button
               variant="contained"
               onClick={handleSaveAndContinue}
+              disabled={isPremiumOutdated}
             >
               Next Step
             </Button>
           </Box>
+          
+          {isPremiumOutdated && (
+            <Typography 
+              color="error" 
+              align="right" 
+              sx={{ mt: 1, fontSize: '0.9rem' }}
+            >
+              Premium calculation is not up to date. Please refresh it before proceeding.
+            </Typography>
+          )}
         </Grid>
 
         <Grid item xs={12} md={3.6} sx={{ position: 'relative' }}>
           <Box sx={{ position: 'sticky', top: 16 }}>
-            <PremiumSection />
+            <PremiumSection
+              onRequestRefresh={handlePremiumRefresh}
+            />
           </Box>
         </Grid>
       </Grid>

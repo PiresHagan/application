@@ -1,11 +1,36 @@
 import React from 'react';
-import { Box, Paper, Typography, Divider, CircularProgress } from '@mui/material';
-import { useSelector } from 'react-redux';
+import { Box, Paper, Typography, Divider, CircularProgress, Button } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { useSelector, useDispatch } from 'react-redux';
+import { calculatePremium } from '../../slices/premiumSlice';
+import createPremiumCalcRequest from '../../utils/buildPremiumCalcRequest';
 
-const PremiumSection = () => {
+const PremiumSection = ({ onRequestRefresh }) => {
+  const dispatch = useDispatch();
   const premiumData = useSelector(state => state.premium?.data);
   const loading = useSelector(state => state.premium?.loading);
   const error = useSelector(state => state.premium?.error);
+  const isOutdated = useSelector(state => state.premium?.isOutdated);
+  const applicationNumber = useSelector(state => state.application?.applicationNumber);
+  
+  // Get the necessary state for premium calculation
+  const coverageState = useSelector(state => ({
+    coverage: state.coverage,
+    coverageOwners: state.coverageOwners
+  }));
+
+  const handleRefreshPremium = () => {
+    // Request the parent component to provide current form data
+    if (onRequestRefresh) {
+      onRequestRefresh();
+    } else {
+      // Fallback to using Redux store data if callback not provided
+      const calcRequest = createPremiumCalcRequest(coverageState, applicationNumber);
+      if (calcRequest) {
+        dispatch(calculatePremium(calcRequest));
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -27,6 +52,14 @@ const PremiumSection = () => {
         <Typography color="error" sx={{ mt: 2 }}>
           Error calculating premium: {error}
         </Typography>
+        <Button 
+          variant="contained" 
+          startIcon={<RefreshIcon />} 
+          onClick={handleRefreshPremium}
+          sx={{ mt: 2 }}
+        >
+          Refresh
+        </Button>
       </Paper>
     );
   }
@@ -37,16 +70,54 @@ const PremiumSection = () => {
         <Typography variant="h6" gutterBottom>Premium Calculation</Typography>
         <Divider sx={{ mb: 2 }} />
         <Typography sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
-          Complete the form to see premium calculation results.
+          Loading premium calculation...
         </Typography>
+        <Button 
+          variant="contained" 
+          startIcon={<RefreshIcon />} 
+          onClick={handleRefreshPremium}
+          sx={{ mt: 2 }}
+        >
+          Calculate Premium
+        </Button>
       </Paper>
     );
   }
 
   return (
     <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
-      <Typography variant="h6" gutterBottom>Premium Calculation</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6">Premium Calculation</Typography>
+        <Button 
+          variant={isOutdated ? "contained" : "outlined"}
+          color={isOutdated ? "error" : "primary"}
+          size="small" 
+          startIcon={<RefreshIcon />} 
+          onClick={handleRefreshPremium}
+        >
+          Refresh
+        </Button>
+      </Box>
       <Divider sx={{ mb: 2 }} />
+      
+      {isOutdated && (
+        <Typography 
+          sx={{ 
+            mb: 2, 
+            p: 1, 
+            bgcolor: 'error.light', 
+            color: 'error.contrastText',
+            borderRadius: 1, 
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <RefreshIcon sx={{ mr: 1 }} /> Calculation not up to date. Please refresh.
+        </Typography>
+      )}
       
       <Box sx={{ mt: 2, mb: 3 }}>
         <Typography variant="subtitle1" fontWeight="bold">

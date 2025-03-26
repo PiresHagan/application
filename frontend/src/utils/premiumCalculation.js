@@ -1,4 +1,5 @@
 import createPremiumCalcRequest from './buildPremiumCalcRequest';
+import { markPremiumOutdated } from '../slices/premiumSlice';
 
 /**
  * Checks if the premium calculation should be triggered based on validation state
@@ -11,23 +12,20 @@ export const shouldTriggerCalculation = (sectionValidation) => {
 };
 
 /**
- * Handles changes to coverage data and triggers premium calculation when appropriate
+ * Handles changes to coverage data and marks premium as outdated when appropriate
  * @param {Object} state - The Redux state containing coverage data
  * @param {Object} sectionValidation - The validation state of sections
  * @param {string} applicationNumber - The application number
- * @param {Function} calculatePremiumCallback - Callback function to execute the premium calculation
+ * @param {Function} dispatchFn - Redux dispatch function
  */
-export const handleCoverageChange = (state, sectionValidation, applicationNumber, calculatePremiumCallback) => {
-  // Only proceed if calculations should be triggered based on validation state
+export const handleCoverageChange = (state, sectionValidation, applicationNumber, dispatchFn) => {
+  // Only proceed if calculations should be marked as outdated based on validation state
   if (!shouldTriggerCalculation(sectionValidation)) {
     return;
   }
 
-  const calcRequest = createPremiumCalcRequest(state, applicationNumber);
-  
-  if (calcRequest) {
-    calculatePremiumCallback(calcRequest);
-  }
+  // Instead of triggering calculation, mark the premium as outdated
+  dispatchFn(markPremiumOutdated());
 };
 
 /**
@@ -39,7 +37,7 @@ export const handleCoverageChange = (state, sectionValidation, applicationNumber
  *     reduxState,
  *     sectionValidation,
  *     applicationNumber,
- *     (requestData) => dispatch(calculatePremium(requestData))
+ *     dispatch // Pass dispatch instead of calculatePremium
  *   );
  * }, [productData, baseCoverageData, additionalCoverages, riders, sectionValidation]);
  */
