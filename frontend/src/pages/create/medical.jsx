@@ -36,10 +36,8 @@ function Medical({ applicationNumber, onStepComplete }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Get insureds from the coverageOwnersSlice
   const insureds = useSelector(state => state.coverageOwners.owners || []);
 
-  // Get medical data from the medicalSlice (to be created)
   const medicalData = useSelector(state => state.medical?.medicalData || {});
 
   const [activeTab, setActiveTab] = useState(0);
@@ -49,7 +47,6 @@ function Medical({ applicationNumber, onStepComplete }) {
   const [sectionValidation, setSectionValidation] = useState({});
   const [hasErrors, setHasErrors] = useState(false);
 
-  // Initialize form data with existing medical data or create fresh data
   useEffect(() => {
     if (Object.keys(medicalData).length > 0) {
       setFormData(medicalData);
@@ -167,7 +164,6 @@ function Medical({ applicationNumber, onStepComplete }) {
           }
         };
 
-        // Initialize section validation
         setSectionValidation(prev => ({
           ...prev,
           [insured.id]: {
@@ -265,10 +261,8 @@ function Medical({ applicationNumber, onStepComplete }) {
   const handleFieldChange = (insuredId, section, field, value) => {
     let updatedSection = {};
 
-    // Special handling for "None of the above" selection
     if (field === 'noneOfTheAbove' && value === true &&
       (section === 'chronicConditions' || section === 'familyHistory' || section === 'highRiskActivities')) {
-      // If "None of the above" is checked, uncheck all other options
       const currentSection = formData[insuredId][section] || {};
       updatedSection = Object.keys(currentSection).reduce((acc, key) => {
         if (key === 'noneOfTheAbove') {
@@ -282,14 +276,12 @@ function Medical({ applicationNumber, onStepComplete }) {
       }, {});
     } else if ((section === 'chronicConditions' || section === 'familyHistory' || section === 'highRiskActivities') &&
       typeof value === 'boolean' && value === true && field !== 'noneOfTheAbove') {
-      // If any other checkbox is checked, uncheck "None of the above"
       updatedSection = {
         ...formData[insuredId][section],
         [field]: value,
         noneOfTheAbove: false
       };
     } else {
-      // Standard field update
       updatedSection = {
         ...formData[insuredId][section],
         [field]: value
@@ -304,7 +296,6 @@ function Medical({ applicationNumber, onStepComplete }) {
       }
     }));
 
-    // Special handling for tobacco section
     if (field === 'usesTobacco' && value === 'N') {
       setFormData(prevData => ({
         ...prevData,
@@ -322,11 +313,9 @@ function Medical({ applicationNumber, onStepComplete }) {
       }));
     }
 
-    // Update section validation
     updateSectionValidation(insuredId, section, updatedSection);
   };
 
-  // Helper function to check section completion
   const updateSectionValidation = (insuredId, section, sectionData) => {
     let isValid = false;
 
@@ -417,15 +406,12 @@ function Medical({ applicationNumber, onStepComplete }) {
   };
 
   const handleNext = () => {
-    // If we're just switching between insured tabs
     if (activeTab < insureds.length - 1) {
-      // Validate current insured's form before allowing to move to next tab
       const currentInsuredId = insureds[activeTab].id;
       const isCurrentInsuredValid = validateForm(currentInsuredId);
 
       if (!isCurrentInsuredValid) {
         setHasErrors(true);
-        // Expand all sections to show errors
         const newExpandedState = { ...expandedSections };
         Object.keys(sectionValidation[currentInsuredId] || {}).forEach(section => {
           if (!sectionValidation[currentInsuredId][section]) {
@@ -434,24 +420,18 @@ function Medical({ applicationNumber, onStepComplete }) {
         });
         setExpandedSections(newExpandedState);
 
-        // Show toast message
         toast.error('Please complete all required fields before proceeding');
         return;
       }
 
-      // If valid, proceed to next tab
       setActiveTab(activeTab + 1);
     } else {
-      // We're on the last tab and trying to go to the next step
-      // Validate all insureds' forms
       const isAllValid = insureds.every(insured => validateForm(insured.id));
 
       if (!isAllValid) {
         setHasErrors(true);
-        // Keep current tab, show error
         toast.error('Please complete all required fields before proceeding');
 
-        // Expand invalid sections for current insured to show errors
         const currentInsuredId = insureds[activeTab].id;
         const newExpandedState = { ...expandedSections };
         Object.keys(sectionValidation[currentInsuredId] || {}).forEach(section => {
@@ -463,7 +443,6 @@ function Medical({ applicationNumber, onStepComplete }) {
         return;
       }
 
-      // If all valid, save and proceed
       dispatch(saveMedicalData(formData));
       dispatch(nextStep());
     }
@@ -478,10 +457,8 @@ function Medical({ applicationNumber, onStepComplete }) {
   };
 
   const validateForm = (insuredId) => {
-    // Check that all sections for this insured are valid
     const insuredSections = sectionValidation[insuredId] || {};
 
-    // Required sections that must be validated
     const requiredSections = [
       'heightWeight',
       'tobaccoSubstance',

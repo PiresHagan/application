@@ -1,7 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { apiSlice } from './apiSlice';
 
-// Create an extended API slice for premium calculation
 export const premiumApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     calculatePremium: builder.mutation({
@@ -14,7 +13,6 @@ export const premiumApiSlice = apiSlice.injectEndpoints({
   }),
 });
 
-// Export the auto-generated hook
 export const { useCalculatePremiumMutation } = premiumApiSlice;
 
 const initialState = {

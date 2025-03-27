@@ -14,12 +14,6 @@ import java.util.*;
 @Slf4j
 public class PremiumCalculationService {
 
-    /**
-     * Calculates premiums based on the provided request data
-     * 
-     * @param requestJson JSON containing application, coverage, and insured data
-     * @return JsonNode containing the calculated premiums
-     */
     public JsonNode calculatePremium(JsonNode requestJson) {
         log.info("Calculating premium for request");
         Map<String, List<String>> applicationLevelCollection = new HashMap<>();
@@ -41,7 +35,6 @@ public class PremiumCalculationService {
         addToCollection(applicationLevelCollection, "ApplicationFormGUID", applicationFormGUID);
         addToCollection(applicationLevelCollection, "PlanGUID", planGUID);
 
-        // Process application roles (owners)
         JsonNode roles = requestJson.path("application").path("roles");
         if (roles.isArray()) {
             for (JsonNode roleNode : roles) {
@@ -73,7 +66,6 @@ public class PremiumCalculationService {
             }
         }
 
-        // Process coverages
         JsonNode coverages = requestJson.path("application").path("coverages");
         if (coverages.isArray()) {
             for (JsonNode coverage : coverages) {
@@ -91,7 +83,6 @@ public class PremiumCalculationService {
                 addToCollection(coverageMap, coverageGUID + "_TempFlatDuration", details.path("TempFlatDuration").asText());
                 addToCollection(coverageMap, coverageGUID + "_UWClass", details.path("UWClass").asText());
 
-                // Process coverage roles (insureds)
                 JsonNode coverageRoles = coverage.path("roles");
                 if (coverageRoles.isArray()) {
                     for (JsonNode roleNode : coverageRoles) {
@@ -128,9 +119,6 @@ public class PremiumCalculationService {
         }
     }
 
-    /**
-     * Performs the actual premium calculation based on collected data
-     */
     private Map<String, Object> calculate(Map<String, List<String>> appLevel, Map<String, Map<String, List<String>>> covLevel) {
         Map<String, Object> result = new HashMap<>();
 
@@ -146,11 +134,6 @@ public class PremiumCalculationService {
             String coverageGUID = entry.getKey();
             Map<String, List<String>> coverage = entry.getValue();
 
-            // Basic calculation factors
-            BigDecimal baseFactor = new BigDecimal("0.0005"); // Base premium factor
-            BigDecimal additionalFactor = new BigDecimal("0.0006"); // Additional coverage factor
-
-            // Get face amount
             String faceAmountStr = getFirst(coverage, coverageGUID + "_FaceAmount");
             if (faceAmountStr.isEmpty()) {
                 log.warn("Missing face amount for coverage: {}", coverageGUID);
@@ -159,45 +142,19 @@ public class PremiumCalculationService {
             
             BigDecimal faceAmount = new BigDecimal(faceAmountStr);
             
-            // Apply underwriting factors
-            String uwClass = getFirst(coverage, coverageGUID + "_UWClass");
-            BigDecimal uwFactor = getUnderwritingFactor(uwClass);
+            BigDecimal annual = faceAmount.divide(BigDecimal.valueOf(52), 2, RoundingMode.HALF_UP);
+            BigDecimal monthly = faceAmount.divide(BigDecimal.valueOf(624), 2, RoundingMode.HALF_UP);
+            BigDecimal quarterly = faceAmount.divide(BigDecimal.valueOf(208), 2, RoundingMode.HALF_UP);
+            BigDecimal semiAnnual = faceAmount.divide(BigDecimal.valueOf(104), 2, RoundingMode.HALF_UP);
             
-            // Apply table rating
-            String tableRatingStr = getFirst(coverage, coverageGUID + "_TableRating");
-            BigDecimal tableRating = tableRatingStr.isEmpty() ? 
-                BigDecimal.ONE : new BigDecimal(tableRatingStr).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-            
-            // Apply tobacco status factors
-            String tobacco = getFirst(coverage, coverageGUID + "_Tobacco");
-            BigDecimal tobaccoFactor = "Smoker".equals(tobacco) ? new BigDecimal("1.5") : BigDecimal.ONE;
-            
-            // Calculate premium for this coverage
-            BigDecimal isBaseCoverage = isCoverageDerivedFromBase(coverage) ? baseFactor : additionalFactor;
-            BigDecimal premium = faceAmount
-                    .multiply(isBaseCoverage)
-                    .multiply(uwFactor)
-                    .multiply(tableRating)
-                    .multiply(tobaccoFactor)
-                    .setScale(2, RoundingMode.HALF_UP);
-            
-            // Calculate various payment frequencies
-            BigDecimal annual = premium;
-            BigDecimal monthly = annual.divide(new BigDecimal("11.23"), 2, RoundingMode.HALF_UP);
-            BigDecimal quarterly = annual.divide(new BigDecimal("3.68"), 2, RoundingMode.HALF_UP);
-            BigDecimal semiAnnual = annual.divide(new BigDecimal("1.92"), 2, RoundingMode.HALF_UP);
-            
-            // Store individual coverage premium
             result.put(coverageGUID + "_premium", annual);
             
-            // Add to totals
             totalAnnual = totalAnnual.add(annual);
             totalMonthly = totalMonthly.add(monthly);
             totalQuarterly = totalQuarterly.add(quarterly);
             totalSemiAnnual = totalSemiAnnual.add(semiAnnual);
         }
 
-        // Store totals for the application
         result.put(applicationGUID + "_totalAnnualPremium", totalAnnual);
         result.put(applicationGUID + "_totalMonthlyPremium", totalMonthly);
         result.put(applicationGUID + "_totalQuarterlyPremium", totalQuarterly);
@@ -206,48 +163,35 @@ public class PremiumCalculationService {
         return result;
     }
     
-    /**
-     * Determines if a coverage is derived from base coverage
-     */
     private boolean isCoverageDerivedFromBase(Map<String, List<String>> coverage) {
         String defGuid = getFirst(coverage, coverage.keySet().stream()
                 .filter(s -> s.endsWith("_CoverageDefinition"))
                 .findFirst()
                 .orElse(""));
         
-        // This is a simple placeholder - in a real system you'd likely check the definition type
         return defGuid.contains("base") || defGuid.contains("Base");
     }
     
-    /**
-     * Returns a factor based on underwriting class
-     */
     private BigDecimal getUnderwritingFactor(String uwClass) {
         switch (uwClass) {
-            case "01": // Standard
+            case "01":
                 return new BigDecimal("1.0");
-            case "02": // Standard Plus 
+            case "02": 
                 return new BigDecimal("0.9");
-            case "03": // Preferred
+            case "03": 
                 return new BigDecimal("0.8");
-            case "04": // Preferred Plus
+            case "04": 
                 return new BigDecimal("0.7");
             default:
                 return new BigDecimal("1.0");
         }
     }
 
-    /**
-     * Gets the first value for a key from a map, or empty string if not found
-     */
     private String getFirst(Map<String, List<String>> map, String key) {
         List<String> values = map.getOrDefault(key, List.of());
         return values.isEmpty() ? "" : values.get(0);
     }
 
-    /**
-     * Builds a JSON result from the calculation results
-     */
     private JsonNode buildJsonResult(Map<String, Object> premiumResults) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode resultNode = mapper.createObjectNode();
@@ -262,9 +206,6 @@ public class PremiumCalculationService {
         return resultNode;
     }
 
-    /**
-     * Adds a value to a collection, creating the list if it doesn't exist
-     */
     private void addToCollection(Map<String, List<String>> map, String key, String value) {
         map.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
     }

@@ -30,7 +30,6 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
   const [addingForField, setAddingForField] = useState(null);
   const [editingOwner, setEditingOwner] = useState(null);
 
-  // Add API mutations
   const [saveInsured] = useSaveInsuredMutation();
   const [updateInsured] = useUpdateInsuredMutation();
 
@@ -87,19 +86,16 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
           }
         }));
       } else {
-        // Save to backend and get clientGUID
         console.log('Saving insured:', insuredData);
         const response = await saveInsured(insuredData).unwrap();
         console.log('Response:', response);
 
-        // Add to coverage owners store with clientGUID from response
         dispatch(addCoverageOwner({
           ...newOwner,
           clientGUID: response.clientGUID
         }));
       }
 
-      // Update the coverage data
       if (addingForField) {
         onChange({
           ...data,
@@ -117,11 +113,9 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
   };
 
   const isOwnerSelected = (insuredId) => {
-    // First find the coverage owner by ID
     const coverageOwner = owners.find(owner => owner.id === insuredId);
     if (!coverageOwner) return false;
 
-    // Check if this SSN exists in the main owners store
     return mainOwners.some(mainOwner =>
       mainOwner.ssn === coverageOwner.ssn
     );
@@ -130,9 +124,6 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
   const shouldShowRelationshipField = (insuredId) => {
     if (!insuredId) return false;
 
-    // Show field if either:
-    // 1. Owner is not in main owners list (new insured)
-    // 2. Owner exists but is not marked as "same as owner"
     const coverageOwner = owners.find(owner => owner.id === insuredId);
     if (!coverageOwner) return false;
 

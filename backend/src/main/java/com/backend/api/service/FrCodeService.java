@@ -18,7 +18,6 @@ public class FrCodeService {
     public Map<String, List<Map<String, String>>> getAllDropdownValues() {
         Map<String, List<Map<String, String>>> dropdowns = new HashMap<>();
         
-        // Fetch from database
         List<Map<String, String>> countries = frCodeRepository.findCodeAndDescriptionByCodeName("frcodeCountry");
         dropdowns.put("countries", countries);
 

@@ -99,7 +99,6 @@ function Create() {
     'Submission & Confirmation'
   ];
 
-  // Helper function to get tooltip text based on step status
   const getTooltipText = (index) => {
     if (index === activeStep) {
       return stepValidation[index]

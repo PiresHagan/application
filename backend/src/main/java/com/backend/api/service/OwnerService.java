@@ -23,17 +23,14 @@ public class OwnerService {
         String applicationFormNumber = request.getApplicationFormNumber();
         
         for (OwnerDTO owner : request.getOwners()) {
-            // Generate GUIDs
             String clientGUID = UUID.randomUUID().toString();
             String roleGUID = UUID.randomUUID().toString();
             String applicationFormGUID = UUID.randomUUID().toString();
-            // Generate a PlanGUID if not provided in the request
             String planGUID = (owner.getPlanGUID() != null && !owner.getPlanGUID().isEmpty()) 
                 ? owner.getPlanGUID() : UUID.randomUUID().toString();
             
             log.info("Saving owner: {}", owner);
 
-            // Insert into frapplicationform - updated to include PlanGUID
             jdbcTemplate.update("""
                 INSERT INTO frapplicationform (
                     ApplicationFormGUID, ApplicationFormNumber, LastModifiedDate, PlanGUID
@@ -42,7 +39,6 @@ public class OwnerService {
                 applicationFormGUID, applicationFormNumber, LocalDate.now(), planGUID
             );
             
-            // Insert into frclient
             jdbcTemplate.update("""
                 INSERT INTO frclient (
                     ClientGUID, TypeCode, FirstName, LastName, CompanyName,
@@ -56,7 +52,6 @@ public class OwnerService {
                 owner.getStateCode(), owner.getSsn(), owner.getBusinessRegistrationNumber()
             );
             
-            // Insert into frrole
             jdbcTemplate.update("""
                 INSERT INTO frrole (
                     RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, StatusCode
@@ -65,11 +60,9 @@ public class OwnerService {
                 roleGUID, "01", clientGUID, applicationFormGUID, "01"
             );
             
-            // Insert addresses
             for (AddressDTO address : owner.getAddresses()) {
                 String addressGUID = UUID.randomUUID().toString();
                 
-                // Insert into fraddress
                 jdbcTemplate.update("""
                     INSERT INTO fraddress (
                         AddressGUID, TypeCode, StatusCode, ClientGUID
@@ -78,7 +71,6 @@ public class OwnerService {
                     addressGUID, address.getTypeCode(), "01", clientGUID
                 );
                 
-                // Insert into fraddressdetails
                 jdbcTemplate.update("""
                     INSERT INTO fraddressdetails (
                         AddressGUID, AddressLine1, AddressLine2, City,

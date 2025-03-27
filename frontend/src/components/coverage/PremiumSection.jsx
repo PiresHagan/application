@@ -11,21 +11,17 @@ const PremiumSection = ({ onRequestRefresh }) => {
   const outdated = useSelector(state => state.premium?.outdated);
   const applicationNumber = useSelector(state => state.application?.applicationNumber);
   
-  // RTK Query mutation hook
   const [calculatePremium, { isLoading, error }] = useCalculatePremiumMutation();
 
-  // Get the necessary state for premium calculation
   const coverageState = useSelector(state => ({
     coverage: state.coverage,
     coverageOwners: state.coverageOwners
   }));
 
   const handleRefreshPremium = async () => {
-    // Request the parent component to provide current form data
     if (onRequestRefresh) {
       onRequestRefresh();
     } else {
-      // Fallback to using Redux store data if callback not provided
       const calcRequest = createPremiumRequest(coverageState, applicationNumber);
       if (calcRequest) {
         try {
@@ -94,7 +90,7 @@ const PremiumSection = ({ onRequestRefresh }) => {
     <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Premium Calculation</Typography>
-        <Button 
+        {/* <Button 
           variant={outdated ? "contained" : "outlined"}
           color={outdated ? "error" : "primary"}
           size="small" 
@@ -102,11 +98,11 @@ const PremiumSection = ({ onRequestRefresh }) => {
           onClick={handleRefreshPremium}
         >
           Refresh
-        </Button>
+        </Button> */}
       </Box>
       <Divider sx={{ mb: 2 }} />
       
-      {outdated && (
+      {/* {outdated && (
         <Typography 
           sx={{ 
             mb: 2, 
@@ -123,7 +119,7 @@ const PremiumSection = ({ onRequestRefresh }) => {
         >
           <RefreshIcon sx={{ mr: 1 }} /> Calculation not up to date. Please refresh.
         </Typography>
-      )}
+      )} */}
       
       <Box sx={{ mt: 2, mb: 3 }}>
         <Typography variant="subtitle1" fontWeight="bold">

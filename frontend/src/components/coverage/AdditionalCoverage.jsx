@@ -38,7 +38,6 @@ function AdditionalCoverage({
   const [saveInsured] = useSaveInsuredMutation();
   const [updateInsured] = useUpdateInsuredMutation();
 
-  // Add state for modal
   const [isAddOwnerModalOpen, setIsAddOwnerModalOpen] = useState(false);
   const [editingOwner, setEditingOwner] = useState(null);
   const [activeCoverageId, setActiveCoverageId] = useState(null);
@@ -103,7 +102,6 @@ function AdditionalCoverage({
         }));
       }
 
-      // Update the coverage data
       onChange('insured1', newOwner.id, activeCoverageId);
 
       toast.success(editingOwner ? 'Insured updated successfully!' : 'Insured added successfully!');
@@ -134,12 +132,10 @@ function AdditionalCoverage({
   };
 
   const isOwnerUsedElsewhere = (ownerId, currentCoverageId) => {
-    // Check if used in base coverage
     if (baseCoverageData.insured1 === ownerId || baseCoverageData.insured2 === ownerId) {
       return true;
     }
 
-    // Check if used in other additional coverages
     return coverages.some(coverage =>
       coverage.id !== currentCoverageId && coverage.insured1 === ownerId
     );
@@ -330,7 +326,6 @@ function AdditionalCoverage({
                   ))}
                 </Select>
               </FormControl>
-              {/* {coverages.length > 1 && ( */}
               <IconButton
                 color="error"
                 onClick={() => onRemove(coverage.id)}
@@ -338,13 +333,11 @@ function AdditionalCoverage({
               >
                 <DeleteIcon />
               </IconButton>
-              {/* )} */}
             </Box>
           </Box>
         );
       })}
 
-      {/* Add Owner Modal */}
       <AddOwnerModal
         open={isAddOwnerModalOpen}
         onClose={() => {
@@ -358,7 +351,6 @@ function AdditionalCoverage({
         editingOwner={editingOwner}
       />
 
-      {/* Add New Coverage Button */}
       <Button
         variant="contained"
         color="primary"

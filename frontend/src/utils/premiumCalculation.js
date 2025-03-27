@@ -7,23 +7,19 @@ import { markPremiumOutdated } from '../slices/premiumSlice';
  * @returns {Object} - Formatted premium data
  */
 export const formatPremiumResult = (calculationResult) => {
-  // Extract the application GUID to find related keys
   const appGuid = Object.keys(calculationResult).find(key => 
     key.includes('_totalAnnualPremium')
   )?.split('_totalAnnualPremium')[0] || '';
 
-  // Extract total premiums
   const totalAnnualPremium = calculationResult[`${appGuid}_totalAnnualPremium`] || 0;
   const totalMonthlyPremium = calculationResult[`${appGuid}_totalMonthlyPremium`] || 0;
   const totalQuarterlyPremium = calculationResult[`${appGuid}_totalQuarterlyPremium`] || 0;
   const totalSemiAnnualPremium = calculationResult[`${appGuid}_totalSemiAnnualPremium`] || 0;
 
-  // Find individual coverage premiums
   const allPremiums = Object.entries(calculationResult)
     .filter(([key]) => key.endsWith('_premium') && !key.includes(appGuid))
     .map(([_, value]) => value);
 
-  // Process collected premiums
   const basePremium = allPremiums[0] || 0;
   const additionalPremiums = allPremiums.slice(1);
 
@@ -31,7 +27,7 @@ export const formatPremiumResult = (calculationResult) => {
     totalPremium: totalAnnualPremium.toFixed(2),
     basePremium: basePremium.toFixed(2),
     additionalPremiums: additionalPremiums.map(p => p.toFixed(2)),
-    riderPremiums: [], // For future rider implementation
+    riderPremiums: [],
     calculationDate: new Date().toISOString(),
     frequency: 'Annual',
     annualPremium: totalAnnualPremium.toFixed(2),

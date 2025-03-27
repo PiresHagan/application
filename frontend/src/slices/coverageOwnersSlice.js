@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   owners: [],
-  nextId: 1  // Add a counter for sequential IDs
+  nextId: 1
 };
 
 export const coverageOwnersSlice = createSlice({
@@ -10,7 +10,6 @@ export const coverageOwnersSlice = createSlice({
   initialState,
   reducers: {
     setCoverageOwners: (state, action) => {
-      // Map incoming owners with sequential IDs
       state.owners = action.payload.map((owner, index) => ({
         ...owner,
         id: index + 1
@@ -24,7 +23,6 @@ export const coverageOwnersSlice = createSlice({
       );
     },
     addCoverageOwner: (state, action) => {
-      // Add new owner with next sequential ID
       state.owners.push({
         ...action.payload,
         id: state.nextId

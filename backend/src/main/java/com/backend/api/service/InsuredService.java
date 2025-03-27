@@ -46,16 +46,15 @@ public class InsuredService {
             request.getStateCode(), request.getSsn()
         );
         
-        // Insert into frrole with ApplicationFormGUID
         jdbcTemplate.update("""
             INSERT INTO frrole (
                 RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, StatusCode
             ) VALUES (?, ?, ?, ?, ?)
             """,
-            roleGUID, "02", clientGUID, applicationFormGUID, "01" // RoleCode "02" for Insured
+            roleGUID, "02", clientGUID, applicationFormGUID, "01"
         );
 
-        return clientGUID;  // Return the clientGUID
+        return clientGUID;
     }
 
     public void updateInsured(String clientGUID, InsuredSaveRequest request) {

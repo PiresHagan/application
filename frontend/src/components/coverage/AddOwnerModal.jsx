@@ -34,7 +34,6 @@ function AddOwnerModal({ open, onClose, onSave, dropdownValues, owners, editingO
   const [formErrors, setFormErrors] = useState(false);
   const [attemptedFields, setAttemptedFields] = useState({});
 
-  // Update owner state when editingOwner changes
   useEffect(() => {
     if (open) {
       setOwner(editingOwner || {
@@ -52,13 +51,11 @@ function AddOwnerModal({ open, onClose, onSave, dropdownValues, owners, editingO
       [fieldName]: value
     }));
 
-    // Track attempted field
     setAttemptedFields(prev => ({
       ...prev,
       [fieldName]: true
     }));
 
-    // Validate the field
     const { isValid } = validateField(fieldName, value, 'individual', owner.countryCode);
     if (!isValid && !formErrors) {
       setFormErrors(true);
@@ -97,7 +94,6 @@ function AddOwnerModal({ open, onClose, onSave, dropdownValues, owners, editingO
 
     if (!isValid) {
       setFormErrors(true);
-      // Mark all required fields as attempted
       const requiredFields = ['firstName', 'lastName', 'dateOfBirth', 'gender', 'tobacco', 'state', 'ssn'];
       setAttemptedFields(prev => ({
         ...prev,

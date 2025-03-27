@@ -14,16 +14,12 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         
-        // Allow all origins
         config.addAllowedOrigin("http://localhost:3000");
         
-        // Allow all headers
         config.addAllowedHeader("*");
         
-        // Allow all methods
         config.addAllowedMethod("*");
         
-        // Allow credentials
         config.setAllowCredentials(true);
         
         source.registerCorsConfiguration("/**", config);

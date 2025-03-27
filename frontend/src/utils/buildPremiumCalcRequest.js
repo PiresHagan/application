@@ -8,22 +8,18 @@
  * @returns {boolean} - Whether the data is valid for premium calculation
  */
 const isDataValidForCalculation = (productData, baseCoverageData, additionalCoverages, riders, owners) => {
-  // Check if product is selected
   if (!productData.planGUID) {
     return false;
   }
 
-  // Check if base coverage has required fields
   if (!baseCoverageData.insured1 || 
       !baseCoverageData.faceAmount || 
       !baseCoverageData.underwritingClass) {
     return false;
   }
-  // For joint coverage, insured2 must be present
   if (baseCoverageData.coverageType === 'joint' && !baseCoverageData.insured2) {
     return false;
   }
-  // Check if additional coverages are valid
   const isAdditionalCoveragesValid = additionalCoverages.every(coverage => 
     coverage.insured1 && 
     coverage.faceAmount && 
@@ -33,7 +29,6 @@ const isDataValidForCalculation = (productData, baseCoverageData, additionalCove
   if (!isAdditionalCoveragesValid && additionalCoverages.length > 0) {
     return false;
   }
-  // Check if riders are valid
   const isRidersValid = riders.every(rider => 
     rider.type && 
     rider.selectedPerson
@@ -45,11 +40,6 @@ const isDataValidForCalculation = (productData, baseCoverageData, additionalCove
   return true;
 };
 
-/**
- * Maps an insured from the coverage owners array to the client object format
- * @param {Object} insured - The insured from the coverage owners array
- * @returns {Object} - Client object for the JSON request
- */
 const mapClientFromInsured = (insured) => {
   return {
     ClientGUID: insured.clientGUID || `CLIENT-${insured.id}`,
@@ -64,14 +54,6 @@ const mapClientFromInsured = (insured) => {
   };
 };
 
-/**
- * Maps a coverage to the coverage object format for the JSON request
- * @param {Object} coverage - The coverage data
- * @param {string} type - The type of coverage (base or additional)
- * @param {number} index - The index for generating IDs
- * @param {Array} owners - The coverage owners array
- * @returns {Object} - Coverage object for the JSON request
- */
 const mapCoverage = (coverage, type, index, owners) => {
   // Find the insured owners
   const insured1 = owners.find(owner => owner.id === coverage.insured1);
@@ -123,16 +105,6 @@ const mapCoverage = (coverage, type, index, owners) => {
   };
 };
 
-/**
- * Builds a premium calculation request based on the coverage data
- * @param {Object} productData - Product data from the coverage page
- * @param {Object} baseCoverageData - Base coverage data
- * @param {Array} additionalCoverages - Additional coverages array
- * @param {Array} riders - Riders array
- * @param {Array} owners - Coverage owners array
- * @param {string} applicationNumber - The application number
- * @returns {Object|null} - The JSON request or null if data is invalid
- */
 const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCoverages, riders, owners, applicationNumber) => {
   if (!isDataValidForCalculation(productData, baseCoverageData, additionalCoverages, riders, owners)) {
     return null;
@@ -168,13 +140,6 @@ const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCovera
   return request;
 };
 
-/**
- * Creates a premium calculation request if the data is valid
- * @param {Object} state - The Redux state with coverage data
- * @param {string} applicationNumber - The application number
- * @param {boolean} forceInitialCalculation - Whether to force initial calculation
- * @returns {Object|null} - The JSON request or null if data is invalid
- */
 export const createPremiumCalcRequest = (state, applicationNumber, forceInitialCalculation = false) => {
   const productData = state.coverage.product;
   const baseCoverageData = state.coverage.base;
@@ -182,9 +147,7 @@ export const createPremiumCalcRequest = (state, applicationNumber, forceInitialC
   const riders = state.coverage.riders || [];
   const owners = state.coverageOwners.owners || [];
   
-  // If forceInitialCalculation is true, we'll create a basic valid request even if data isn't perfect
   if (forceInitialCalculation) {
-    // Create a minimal valid request with default values where needed
     const enhancedProductData = {
       ...productData,
       planGUID: productData.planGUID || 'DEFAULT-PLAN-GUID'

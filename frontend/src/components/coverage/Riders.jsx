@@ -232,7 +232,6 @@ function Riders({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Show general errors if any */}
       {showErrors && errors.general && (
         <Alert severity="error" sx={{ mb: 1 }}>
           {errors.general}
