@@ -2,37 +2,43 @@ import React from 'react';
 import { Box, Paper, Typography, Divider, CircularProgress, Button } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSelector, useDispatch } from 'react-redux';
-import { calculatePremium } from '../../slices/premiumSlice';
-import createPremiumCalcRequest from '../../utils/buildPremiumCalcRequest';
+import { useCalculatePremiumMutation, setPremiumData } from '../../slices/premiumSlice';
+import { createPremiumRequest, formatPremiumResult } from '../../utils/premiumCalculation';
 
 const PremiumSection = ({ onRequestRefresh }) => {
   const dispatch = useDispatch();
-  const premiumData = useSelector(state => state.premium?.data);
-  const loading = useSelector(state => state.premium?.loading);
-  const error = useSelector(state => state.premium?.error);
-  const isOutdated = useSelector(state => state.premium?.isOutdated);
+  const premiumData = useSelector(state => state.premium?.premiumData);
+  const outdated = useSelector(state => state.premium?.outdated);
   const applicationNumber = useSelector(state => state.application?.applicationNumber);
   
+  // RTK Query mutation hook
+  const [calculatePremium, { isLoading, error }] = useCalculatePremiumMutation();
+
   // Get the necessary state for premium calculation
   const coverageState = useSelector(state => ({
     coverage: state.coverage,
     coverageOwners: state.coverageOwners
   }));
 
-  const handleRefreshPremium = () => {
+  const handleRefreshPremium = async () => {
     // Request the parent component to provide current form data
     if (onRequestRefresh) {
       onRequestRefresh();
     } else {
       // Fallback to using Redux store data if callback not provided
-      const calcRequest = createPremiumCalcRequest(coverageState, applicationNumber);
+      const calcRequest = createPremiumRequest(coverageState, applicationNumber);
       if (calcRequest) {
-        dispatch(calculatePremium(calcRequest));
+        try {
+          const result = await calculatePremium(calcRequest).unwrap();
+          dispatch(setPremiumData(formatPremiumResult(result)));
+        } catch (err) {
+          console.error('Failed to calculate premium:', err);
+        }
       }
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
         <Typography variant="h6" gutterBottom>Premium Calculation</Typography>
@@ -50,7 +56,7 @@ const PremiumSection = ({ onRequestRefresh }) => {
         <Typography variant="h6" gutterBottom>Premium Calculation</Typography>
         <Divider sx={{ mb: 2 }} />
         <Typography color="error" sx={{ mt: 2 }}>
-          Error calculating premium: {error}
+          Error calculating premium: {error.data?.message || error.error}
         </Typography>
         <Button 
           variant="contained" 
@@ -89,8 +95,8 @@ const PremiumSection = ({ onRequestRefresh }) => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Premium Calculation</Typography>
         <Button 
-          variant={isOutdated ? "contained" : "outlined"}
-          color={isOutdated ? "error" : "primary"}
+          variant={outdated ? "contained" : "outlined"}
+          color={outdated ? "error" : "primary"}
           size="small" 
           startIcon={<RefreshIcon />} 
           onClick={handleRefreshPremium}
@@ -100,7 +106,7 @@ const PremiumSection = ({ onRequestRefresh }) => {
       </Box>
       <Divider sx={{ mb: 2 }} />
       
-      {isOutdated && (
+      {outdated && (
         <Typography 
           sx={{ 
             mb: 2, 

@@ -162,6 +162,8 @@ const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCovera
       coverages: allCoverages
     }
   };
+
+  console.log('request', request);
   
   return request;
 };
@@ -204,8 +206,6 @@ export const createPremiumCalcRequest = (state, applicationNumber, forceInitialC
       applicationNumber
     );
   }
-
-  console.log('baseCoverageData', baseCoverageData);
   
   return buildPremiumCalcRequest(
     productData,

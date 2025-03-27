@@ -26,9 +26,8 @@ import {
   setAdditionalCoverages,
   setRiders
 } from '../../slices/coverageSlice';
-import { handleCoverageChange } from '../../utils/premiumCalculation';
-import { calculatePremium } from '../../slices/premiumSlice';
-import createPremiumCalcRequest from '../../utils/buildPremiumCalcRequest';
+import { handleCoverageChange, createPremiumRequest, formatPremiumResult } from '../../utils/premiumCalculation';
+import { useCalculatePremiumMutation, setPremiumData } from '../../slices/premiumSlice';
 
 function Coverage({ applicationNumber, onStepComplete }) {
   const dispatch = useDispatch();
@@ -38,7 +37,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const { data: formOwners, isLoading } = useGetFormOwnersQuery(applicationNumber);
   const mainOwners = useSelector(state => state.owner.owners);
   const coverageOwners = useSelector(state => state.coverageOwners.owners);
-  const isPremiumOutdated = useSelector(state => state.premium?.isOutdated);
+  const outdated = useSelector(state => state.premium?.outdated);
 
   const storedProductData = useSelector(state => state.coverage.product);
   const storedBaseCoverageData = useSelector(state => state.coverage.base || {});
@@ -98,12 +97,14 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const [updateApplicationPlan] = useUpdateApplicationPlanMutation();
   const [saveBaseCoverage] = useSaveBaseCoverageMutation();
 
+  // RTK Query mutation hook
+  const [calculatePremium, { isLoading: premiumLoading }] = useCalculatePremiumMutation();
+
   const handleProductDataChange = (newData) => {
     setProductDataState(newData);
   };
 
   const handleBaseCoverageDataChange = (newData) => {
-    console.log('newData', newData);
     setBaseCoverageDataState(newData);
   };
 
@@ -604,31 +605,12 @@ function Coverage({ applicationNumber, onStepComplete }) {
     dispatch,
     applicationNumber
   ]);
-  
-  useEffect(() => {
-    const state = {
-      coverage: {
-        product: productData,
-        base: baseCoverageData,
-        additional: additionalCoverages,
-        riders: riders
-      },
-      coverageOwners: {
-        owners: owners
-      }
-    };
-    
-    const calcRequest = createPremiumCalcRequest(state, applicationNumber, true);
-    if (calcRequest) {
-      dispatch(calculatePremium(calcRequest));
-    }
-  }, []);
 
   const handleSaveAndContinue = async () => {
     setShowErrors(true);
 
     // Check if premium calculation is outdated
-    if (isPremiumOutdated) {
+    if (outdated) {
       toast.error('Please refresh the premium calculation before proceeding');
       return;
     }
@@ -736,7 +718,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   useEffect(() => {
     if (formOwners) {
-      dispatch(setCoverageOwners(formOwners.map(owner => ({
+      const mappedOwners = formOwners.map(owner => ({
         clientGUID: owner.clientGUID,
         roleGUID: owner.roleGUID,
         roleCode: owner.roleCode,
@@ -750,9 +732,36 @@ function Coverage({ applicationNumber, onStepComplete }) {
         state: owner.stateCode,
         ssn: owner.ssn,
         ownerType: '01'
-      }))));
+      }));
+
+      dispatch(setCoverageOwners(mappedOwners));
+
+      // Calculate premium after owners are set
+      const state = {
+        coverage: {
+          product: productData,
+          base: baseCoverageData,
+          additional: additionalCoverages,
+          riders: riders
+        },
+        coverageOwners: {
+          owners: mappedOwners
+        }
+      };
+      
+      const calcRequest = createPremiumRequest(state, applicationNumber);
+      if (calcRequest) {
+        calculatePremium(calcRequest)
+          .unwrap()
+          .then(result => {
+            dispatch(setPremiumData(formatPremiumResult(result)));
+          })
+          .catch(err => {
+            console.error('Failed to calculate initial premium:', err);
+          });
+      }
     }
-  }, [formOwners, dispatch]);
+  }, [formOwners, dispatch, productData, baseCoverageData, additionalCoverages, riders, applicationNumber, calculatePremium]);
 
   const getInsuredsList = () => {
     const selectedInsureds = [];
@@ -824,7 +833,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
   }, [sectionValidation, onStepComplete]);
 
   // Function to handle premium calculation refresh with current form data
-  const handlePremiumRefresh = () => {
+  const handlePremiumRefresh = async () => {
     // Use current component state (not Redux store) to build the calculation request
     const currentState = {
       coverage: {
@@ -838,10 +847,15 @@ function Coverage({ applicationNumber, onStepComplete }) {
       }
     };
     
-    // Create and dispatch calculation request with current form data
-    const calcRequest = createPremiumCalcRequest(currentState, applicationNumber);
+    // Create calculation request with current form data
+    const calcRequest = createPremiumRequest(currentState, applicationNumber);
     if (calcRequest) {
-      dispatch(calculatePremium(calcRequest));
+      try {
+        const result = await calculatePremium(calcRequest).unwrap();
+        dispatch(setPremiumData(formatPremiumResult(result)));
+      } catch (err) {
+        console.error('Failed to calculate premium:', err);
+      }
     }
   };
 
@@ -1013,13 +1027,13 @@ function Coverage({ applicationNumber, onStepComplete }) {
             <Button
               variant="contained"
               onClick={handleSaveAndContinue}
-              disabled={isPremiumOutdated}
+              disabled={outdated}
             >
               Next Step
             </Button>
           </Box>
           
-          {isPremiumOutdated && (
+          {outdated && (
             <Typography 
               color="error" 
               align="right" 

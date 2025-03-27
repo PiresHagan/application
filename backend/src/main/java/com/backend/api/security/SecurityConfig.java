@@ -39,7 +39,9 @@ public class SecurityConfig {
         "/api/products/company/{companyName}",
         "/api/products/{productGUID}/plans",
         "/api/products/application/{applicationNumber}/plan",
-        "/api/coverage/base/{applicationNumber}"
+        "/api/coverage/base/{applicationNumber}",
+        "/api/coverage/premium/calculate",
+        "/api/coverage/premium/refresh"
     };
 
     @Bean
