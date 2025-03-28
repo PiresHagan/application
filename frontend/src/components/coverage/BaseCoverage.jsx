@@ -113,7 +113,7 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
   };
 
   const isOwnerSelected = (insuredId) => {
-    const coverageOwner = owners.find(owner => owner.id === insuredId);
+    const coverageOwner = owners.find(owner => owner.id == insuredId);
     if (!coverageOwner) return false;
 
     return mainOwners.some(mainOwner =>

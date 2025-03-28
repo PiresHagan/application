@@ -2,9 +2,8 @@ import createPremiumCalcRequest from './buildPremiumCalcRequest';
 import { markPremiumOutdated } from '../slices/premiumSlice';
 
 /**
- * Formats the raw premium calculation results into a structured format
- * @param {Object} calculationResult - Raw calculation result from the API
- * @returns {Object} - Formatted premium data
+ * @param {Object} calculationResult 
+ * @returns {Object} 
  */
 export const formatPremiumResult = (calculationResult) => {
   const appGuid = Object.keys(calculationResult).find(key => 
@@ -38,34 +37,28 @@ export const formatPremiumResult = (calculationResult) => {
 };
 
 /**
- * Checks if the premium calculation should be triggered based on validation state
  * @param {Object} sectionValidation - The validation state of each section
  * @returns {boolean} - Whether the premium calculation should be triggered
  */
 export const shouldTriggerCalculation = (sectionValidation) => {
-  // Premium calculation should only be triggered when base coverage is valid
   return sectionValidation.base === true;
 };
 
 /**
- * Handles changes to coverage data and marks premium as outdated when appropriate
  * @param {Object} state - The Redux state containing coverage data
  * @param {Object} sectionValidation - The validation state of sections
  * @param {string} applicationNumber - The application number
  * @param {Function} dispatchFn - Redux dispatch function
  */
 export const handleCoverageChange = (state, sectionValidation, applicationNumber, dispatchFn) => {
-  // Only proceed if calculations should be marked as outdated based on validation state
   if (!shouldTriggerCalculation(sectionValidation)) {
     return;
   }
 
-  // Instead of triggering calculation, mark the premium as outdated
   dispatchFn(markPremiumOutdated());
 };
 
 /**
- * Creates a premium calculation request that can be used with the useCalculatePremiumMutation hook
  * @param {Object} state - The state object containing coverage data 
  * @param {string} applicationNumber - The application number
  * @returns {Object} - Request data object ready for API call
@@ -76,7 +69,6 @@ export const createPremiumRequest = (state, applicationNumber) => {
 
 /**
  * 
- * // In component after a field changes and validation occurs:
  * useEffect(() => {
  *   
  *   handleCoverageChange(

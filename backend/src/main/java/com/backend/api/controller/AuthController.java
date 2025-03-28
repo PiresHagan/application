@@ -50,7 +50,7 @@ public class AuthController {
 
     private void addTokenCookie(HttpServletResponse response, String token) {
         Cookie cookie = new Cookie("jwt", token);
-        cookie.setMaxAge(60 * 60); // 1 hour in seconds
+        cookie.setMaxAge(60 * 60); 
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         response.addCookie(cookie);

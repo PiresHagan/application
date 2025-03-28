@@ -400,7 +400,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
   };
 
   const handleFieldChange = (section, field, value) => {
-    console.log('Field change:', { section, field, value });
     switch (section) {
       case 'product':
         const newProductData = { ...productData, [field]: value };
@@ -410,6 +409,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
         const newBaseCoverageData = { ...baseCoverageData, [field]: value };
         handleBaseCoverageDataChange(newBaseCoverageData);
         validateAndUpdateSection('base', newBaseCoverageData);
+        console.log('test');
         break;
       case 'additional':
         if (field.name === '_multipleFields') {
@@ -522,6 +522,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
       ...prev,
       riders: ridersValid
     }));
+    triggerPremiumCalculation();
   }, [productData, baseCoverageData, additionalCoverages, riders]);
 
   useEffect(() => {
@@ -672,13 +673,6 @@ function Coverage({ applicationNumber, onStepComplete }) {
             owners: owners
           }
         };
-        
-        handleCoverageChange(
-          state, 
-          sectionValidation, 
-          applicationNumber,
-          (requestData) => dispatch(calculatePremium(requestData))
-        );
       }
 
       dispatch(nextStep());
@@ -690,7 +684,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   useEffect(() => {
     if (formOwners) {
-      const mappedOwners = formOwners.map(owner => ({
+      dispatch(setCoverageOwners(formOwners.map(owner => ({
         clientGUID: owner.clientGUID,
         roleGUID: owner.roleGUID,
         roleCode: owner.roleCode,
@@ -704,23 +698,24 @@ function Coverage({ applicationNumber, onStepComplete }) {
         state: owner.stateCode,
         ssn: owner.ssn,
         ownerType: '01'
-      }));
+      }))));
+    }
+  }, [formOwners, dispatch]);
 
-      dispatch(setCoverageOwners(mappedOwners));
-
-      const state = {
-        coverage: {
-          product: productData,
-          base: baseCoverageData,
-          additional: additionalCoverages,
-          riders: riders
-        },
-        coverageOwners: {
-          owners: mappedOwners
-        }
-      };
-      
-      const calcRequest = createPremiumRequest(state, applicationNumber);
+  const triggerPremiumCalculation = () => {
+    const state = {
+      coverage: {
+        product: productData,
+        base: baseCoverageData,
+        additional: additionalCoverages,
+        riders: riders
+      },
+      coverageOwners: {
+        owners: owners
+      }
+    };
+    
+    const calcRequest = createPremiumRequest(state, applicationNumber);
       if (calcRequest) {
         calculatePremium(calcRequest)
           .unwrap()
@@ -731,8 +726,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
             console.error('Failed to calculate initial premium:', err);
           });
       }
-    }
-  }, [formOwners, dispatch, productData, baseCoverageData, additionalCoverages, riders, applicationNumber, calculatePremium]);
+  };
 
   const getInsuredsList = () => {
     const selectedInsureds = [];
