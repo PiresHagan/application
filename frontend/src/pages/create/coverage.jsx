@@ -813,11 +813,18 @@ function Coverage({ applicationNumber, onStepComplete }) {
       try {
         const result = await calculatePremium(calcRequest).unwrap();
         dispatch(setPremiumData(formatPremiumResult(result)));
+        // Update PremiumSection with the latest request and response
+        if (premiumSectionRef.current) {
+          premiumSectionRef.current.updateJson(calcRequest, result);
+        }
       } catch (err) {
         console.error('Failed to calculate premium:', err);
       }
     }
   };
+
+  // Create a ref for the PremiumSection component
+  const premiumSectionRef = useRef(null);
 
   return (
     <Box sx={{ pb: 3 }}>
@@ -997,6 +1004,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
         <Grid item xs={12} md={3.6} sx={{ position: 'relative' }}>
           <Box sx={{ position: 'sticky', top: 16 }}>
             <PremiumSection
+              ref={premiumSectionRef}
               onRequestRefresh={handlePremiumRefresh}
             />
           </Box>

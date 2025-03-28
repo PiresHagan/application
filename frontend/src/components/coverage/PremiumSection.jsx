@@ -1,21 +1,32 @@
-import React from 'react';
-import { Box, Paper, Typography, Divider, CircularProgress, Button } from '@mui/material';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import { Box, Paper, Typography, Divider, CircularProgress, Button, Stack } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CodeIcon from '@mui/icons-material/Code';
 import { useSelector, useDispatch } from 'react-redux';
 import { useCalculatePremiumMutation, setPremiumData } from '../../slices/premiumSlice';
 import { createPremiumRequest, formatPremiumResult } from '../../utils/premiumCalculation';
 
-const PremiumSection = ({ onRequestRefresh }) => {
+const PremiumSection = forwardRef(({ onRequestRefresh }, ref) => {
   const dispatch = useDispatch();
   const premiumData = useSelector(state => state.premium?.premiumData);
   const outdated = useSelector(state => state.premium?.outdated);
   const applicationNumber = useSelector(state => state.application?.applicationNumber);
   
   const [calculatePremium, { isLoading, error }] = useCalculatePremiumMutation();
+  const [lastRequest, setLastRequest] = useState(null);
+  const [lastResponse, setLastResponse] = useState(null);
 
   const coverageState = useSelector(state => ({
     coverage: state.coverage,
     coverageOwners: state.coverageOwners
+  }));
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    updateJson: (request, response) => {
+      setLastRequest(request);
+      setLastResponse(response);
+    }
   }));
 
   const handleRefreshPremium = async () => {
@@ -24,13 +35,58 @@ const PremiumSection = ({ onRequestRefresh }) => {
     } else {
       const calcRequest = createPremiumRequest(coverageState, applicationNumber);
       if (calcRequest) {
+        setLastRequest(calcRequest);
         try {
           const result = await calculatePremium(calcRequest).unwrap();
+          setLastResponse(result);
           dispatch(setPremiumData(formatPremiumResult(result)));
         } catch (err) {
           console.error('Failed to calculate premium:', err);
         }
       }
+    }
+  };
+
+  const showRequestJson = () => {
+    const request = lastRequest || createPremiumRequest(coverageState, applicationNumber);
+    if (request) {
+      const jsonString = JSON.stringify(request, null, 2);
+      const newWindow = window.open();
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>Premium Calculation Request</title>
+            <style>
+              body { background-color: #1e1e1e; color: #d4d4d4; font-family: monospace; padding: 20px; }
+              pre { white-space: pre-wrap; }
+            </style>
+          </head>
+          <body>
+            <pre>${jsonString}</pre>
+          </body>
+        </html>
+      `);
+    }
+  };
+
+  const showResponseJson = () => {
+    if (lastResponse || premiumData) {
+      const jsonString = JSON.stringify(lastResponse || premiumData, null, 2);
+      const newWindow = window.open();
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>Premium Calculation Response</title>
+            <style>
+              body { background-color: #1e1e1e; color: #d4d4d4; font-family: monospace; padding: 20px; }
+              pre { white-space: pre-wrap; }
+            </style>
+          </head>
+          <body>
+            <pre>${jsonString}</pre>
+          </body>
+        </html>
+      `);
     }
   };
 
@@ -90,7 +146,7 @@ const PremiumSection = ({ onRequestRefresh }) => {
     <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Premium Calculation</Typography>
-        {/* <Button 
+        <Button 
           variant={outdated ? "contained" : "outlined"}
           color={outdated ? "error" : "primary"}
           size="small" 
@@ -98,11 +154,11 @@ const PremiumSection = ({ onRequestRefresh }) => {
           onClick={handleRefreshPremium}
         >
           Refresh
-        </Button> */}
+        </Button>
       </Box>
       <Divider sx={{ mb: 2 }} />
       
-      {/* {outdated && (
+      {outdated && (
         <Typography 
           sx={{ 
             mb: 2, 
@@ -119,7 +175,7 @@ const PremiumSection = ({ onRequestRefresh }) => {
         >
           <RefreshIcon sx={{ mr: 1 }} /> Calculation not up to date. Please refresh.
         </Typography>
-      )} */}
+      )}
       
       <Box sx={{ mt: 2, mb: 3 }}>
         <Typography variant="subtitle1" fontWeight="bold">
@@ -203,8 +259,29 @@ const PremiumSection = ({ onRequestRefresh }) => {
       <Typography variant="caption" color="text.secondary">
         Last calculated: {premiumData.calculationDate || new Date().toLocaleString()}
       </Typography>
+
+      <Box sx={{ mt: 2 }}>
+        <Stack direction="row" spacing={1} justifyContent="center">
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<CodeIcon />}
+            onClick={showRequestJson}
+          >
+            View Request
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<CodeIcon />}
+            onClick={showResponseJson}
+          >
+            View Response
+          </Button>
+        </Stack>
+      </Box>
     </Paper>
   );
-};
+});
 
 export default PremiumSection;
