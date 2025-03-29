@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useCalculatePremiumMutation, setPremiumData } from '../../slices/premiumSlice';
 import { createPremiumRequest, formatPremiumResult } from '../../utils/premiumCalculation';
 
-const PremiumSection = forwardRef(({ onRequestRefresh }, ref) => {
+const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref) => {
   const dispatch = useDispatch();
   const premiumData = useSelector(state => state.premium?.premiumData);
   const outdated = useSelector(state => state.premium?.outdated);
@@ -26,6 +26,10 @@ const PremiumSection = forwardRef(({ onRequestRefresh }, ref) => {
     updateJson: (request, response) => {
       setLastRequest(request);
       setLastResponse(response);
+    },
+    showRequestJson: (request) => {
+      // Method to be called from parent with the latest request data
+      showJsonInNewTab(request, 'Premium Calculation Request');
     }
   }));
 
@@ -47,15 +51,15 @@ const PremiumSection = forwardRef(({ onRequestRefresh }, ref) => {
     }
   };
 
-  const showRequestJson = () => {
-    const request = lastRequest || createPremiumRequest(coverageState, applicationNumber);
-    if (request) {
-      const jsonString = JSON.stringify(request, null, 2);
+  // Helper function to show JSON in a new tab
+  const showJsonInNewTab = (data, title) => {
+    if (data) {
+      const jsonString = JSON.stringify(data, null, 2);
       const newWindow = window.open();
       newWindow.document.write(`
         <html>
           <head>
-            <title>Premium Calculation Request</title>
+            <title>${title}</title>
             <style>
               body { background-color: #1e1e1e; color: #d4d4d4; font-family: monospace; padding: 20px; }
               pre { white-space: pre-wrap; }
@@ -69,24 +73,49 @@ const PremiumSection = forwardRef(({ onRequestRefresh }, ref) => {
     }
   };
 
+  const showRequestJson = () => {
+    // Use the callback from parent to get the latest request
+    if (onShowRequestJson) {
+      onShowRequestJson();
+    } else {
+      // Fallback to using Redux state if callback not provided
+      const request = createPremiumRequest(coverageState, applicationNumber);
+      showJsonInNewTab(request, 'Premium Calculation Request');
+    }
+  };
+
   const showResponseJson = () => {
-    if (lastResponse || premiumData) {
-      const jsonString = JSON.stringify(lastResponse || premiumData, null, 2);
-      const newWindow = window.open();
-      newWindow.document.write(`
-        <html>
-          <head>
-            <title>Premium Calculation Response</title>
-            <style>
-              body { background-color: #1e1e1e; color: #d4d4d4; font-family: monospace; padding: 20px; }
-              pre { white-space: pre-wrap; }
-            </style>
-          </head>
-          <body>
-            <pre>${jsonString}</pre>
-          </body>
-        </html>
-      `);
+    // For response, use the current premiumData from Redux store
+    if (premiumData) {
+      // Show the raw data structure before formatting
+      const rawApiResponse = {};
+      
+      // Extract application ID from the premium data
+      const appGuid = Object.keys(premiumData)
+        .find(key => key.includes('_totalAnnualPremium'))
+        ?.split('_totalAnnualPremium')[0] || applicationNumber || 'APP-000000';
+      
+      if (appGuid) {
+        // Recreate raw API response structure
+        rawApiResponse[`${appGuid}_totalAnnualPremium`] = parseFloat(premiumData.annualPremium);
+        rawApiResponse[`${appGuid}_totalMonthlyPremium`] = parseFloat(premiumData.monthlyPremium);
+        rawApiResponse[`${appGuid}_totalQuarterlyPremium`] = parseFloat(premiumData.quarterlyPremium);
+        rawApiResponse[`${appGuid}_totalSemiAnnualPremium`] = parseFloat(premiumData.semiAnnualPremium);
+        
+        // Add base premium
+        const baseCoverageGUID = coverageState.coverage.base.coverageGUID || 'COV-base-1';
+        rawApiResponse[`${baseCoverageGUID}_premium`] = parseFloat(premiumData.basePremium);
+        
+        // Add additional premiums if present
+        if (premiumData.additionalPremiums && premiumData.additionalPremiums.length > 0) {
+          premiumData.additionalPremiums.forEach((premium, index) => {
+            const additionalCoverageId = coverageState.coverage.additional[index]?.id || index + 1;
+            rawApiResponse[`COV-additional-${additionalCoverageId}_premium`] = parseFloat(premium);
+          });
+        }
+      }
+      
+      showJsonInNewTab(lastResponse || rawApiResponse, 'Premium Calculation Response');
     }
   };
 
@@ -146,7 +175,7 @@ const PremiumSection = forwardRef(({ onRequestRefresh }, ref) => {
     <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Premium Calculation</Typography>
-        <Button 
+        {/* <Button 
           variant={outdated ? "contained" : "outlined"}
           color={outdated ? "error" : "primary"}
           size="small" 
@@ -154,11 +183,11 @@ const PremiumSection = forwardRef(({ onRequestRefresh }, ref) => {
           onClick={handleRefreshPremium}
         >
           Refresh
-        </Button>
+        </Button> */}
       </Box>
       <Divider sx={{ mb: 2 }} />
       
-      {outdated && (
+      {/* {outdated && (
         <Typography 
           sx={{ 
             mb: 2, 
@@ -175,7 +204,7 @@ const PremiumSection = forwardRef(({ onRequestRefresh }, ref) => {
         >
           <RefreshIcon sx={{ mr: 1 }} /> Calculation not up to date. Please refresh.
         </Typography>
-      )}
+      )} */}
       
       <Box sx={{ mt: 2, mb: 3 }}>
         <Typography variant="subtitle1" fontWeight="bold">

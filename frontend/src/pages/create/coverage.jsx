@@ -713,8 +713,13 @@ function Coverage({ applicationNumber, onStepComplete }) {
       coverageOwners: {
         owners: owners
       }
+    }
+    const isFaceAmountValid = (value) => {
+      if (!value) return true;
+      const numValue = Number(value);
+      return numValue >= 10000 && numValue <= 5000000;
     };
-    
+    if (isFaceAmountValid(baseCoverageData.faceAmount) && isFaceAmountValid(additionalCoverages.faceAmount)) {
     const calcRequest = createPremiumRequest(state, applicationNumber);
       if (calcRequest) {
         calculatePremium(calcRequest)
@@ -726,6 +731,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
             console.error('Failed to calculate initial premium:', err);
           });
       }
+    }
   };
 
   const getInsuredsList = () => {
@@ -825,6 +831,26 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
   // Create a ref for the PremiumSection component
   const premiumSectionRef = useRef(null);
+
+  // Add a function to show current request JSON in PremiumSection
+  const showCurrentRequestJson = () => {
+    const currentState = {
+      coverage: {
+        product: productData,
+        base: baseCoverageData,
+        additional: additionalCoverages,
+        riders: riders
+      },
+      coverageOwners: {
+        owners: owners
+      }
+    };
+    
+    const calcRequest = createPremiumRequest(currentState, applicationNumber);
+    if (calcRequest && premiumSectionRef.current) {
+      premiumSectionRef.current.showRequestJson(calcRequest);
+    }
+  };
 
   return (
     <Box sx={{ pb: 3 }}>
@@ -1006,6 +1032,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
             <PremiumSection
               ref={premiumSectionRef}
               onRequestRefresh={handlePremiumRefresh}
+              onShowRequestJson={showCurrentRequestJson}
             />
           </Box>
         </Grid>
