@@ -251,7 +251,8 @@ function AdditionalCoverage({
                       const updates = {
                         id: coverage.id,
                         updates: {
-                          permanentFlatExtra: isChecked
+                          permanentFlatExtra: isChecked,
+                          permanentFlatExtraAmount: isChecked ? coverage.permanentFlatExtraAmount : '0'
                         }
                       };
                       onChange('_multipleFields', updates, coverage.id);
@@ -284,6 +285,7 @@ function AdditionalCoverage({
                         id: coverage.id,
                         updates: {
                           temporaryFlatExtra: isChecked,
+                          temporaryFlatExtraAmount: isChecked ? coverage.temporaryFlatExtraAmount : '0',
                           temporaryFlatExtraDuration: isChecked ? '1' : '0'
                         }
                       };

@@ -271,18 +271,6 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
               }
               label="Same as Owner"
             />
-            {isOwnerSelected(data.insured2) && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'primary.main',
-                  fontWeight: 'medium',
-                  ml: -1
-                }}
-              >
-                (Owner-Insured)
-              </Typography>
-            )}
           </Box>
 
           {!isOwnerSelected(data.insured2) && data.insured2 && (
@@ -338,7 +326,11 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
           control={
             <Checkbox
               checked={data.permanentFlatExtra}
-              onChange={(e) => onChange({ ...data, permanentFlatExtra: e.target.checked })}
+              onChange={(e) => onChange({ 
+                ...data, 
+                permanentFlatExtra: e.target.checked,
+                permanentFlatExtraAmount: e.target.checked ? data.permanentFlatExtraAmount : '0'
+              })}
             />
           }
           label="Add Permanent Flat Extra"
@@ -366,6 +358,7 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
               onChange={(e) => onChange({
                 ...data,
                 temporaryFlatExtra: e.target.checked,
+                temporaryFlatExtraAmount: e.target.checked ? data.temporaryFlatExtraAmount : '0',
                 temporaryFlatExtraDuration: e.target.checked ? '1' : '0'
               })}
             />
