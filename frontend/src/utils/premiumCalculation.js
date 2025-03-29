@@ -38,10 +38,38 @@ export const formatPremiumResult = (calculationResult) => {
 
 /**
  * @param {Object} sectionValidation - The validation state of each section
+ * @param {Object} state - The Redux state containing coverage data
  * @returns {boolean} - Whether the premium calculation should be triggered
  */
-export const shouldTriggerCalculation = (sectionValidation) => {
-  return sectionValidation.base === true;
+export const shouldTriggerCalculation = (sectionValidation, state) => {
+  // Check if base section is valid 
+  if (sectionValidation.base !== true) {
+    return false;
+  }
+  
+  // Check if face amount is within valid range
+  const baseCoverage = state?.coverage?.base;
+  if (!baseCoverage || !baseCoverage.faceAmount) {
+    return false;
+  }
+  
+  const faceAmount = Number(baseCoverage.faceAmount);
+  if (faceAmount < 10000 || faceAmount > 5000000) {
+    return false;
+  }
+  
+  // Check additional coverages if they exist
+  const additionalCoverages = state?.coverage?.additional || [];
+  for (const coverage of additionalCoverages) {
+    if (coverage.faceAmount) {
+      const additionalFaceAmount = Number(coverage.faceAmount);
+      if (additionalFaceAmount < 10000 || additionalFaceAmount > 5000000) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
 };
 
 /**
@@ -51,7 +79,7 @@ export const shouldTriggerCalculation = (sectionValidation) => {
  * @param {Function} dispatchFn - Redux dispatch function
  */
 export const handleCoverageChange = (state, sectionValidation, applicationNumber, dispatchFn) => {
-  if (!shouldTriggerCalculation(sectionValidation)) {
+  if (!shouldTriggerCalculation(sectionValidation, state)) {
     return;
   }
 

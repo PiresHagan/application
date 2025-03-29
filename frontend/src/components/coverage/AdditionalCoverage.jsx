@@ -219,12 +219,25 @@ function AdditionalCoverage({
                 label="Face Amount"
                 type="number"
                 value={coverage.faceAmount}
-                onChange={(e) => handleCoverageChange(coverage.id, 'faceAmount', e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  const isValid = newValue && Number(newValue) >= 10000 && Number(newValue) <= 5000000;
+                  
+                  // Update both the face amount and its validation status
+                  const updates = {
+                    id: coverage.id,
+                    updates: {
+                      faceAmount: newValue,
+                      faceAmountValid: isValid
+                    }
+                  };
+                  onChange('_multipleFields', updates, coverage.id);
+                }}
                 InputProps={{
                   startAdornment: '$',
                 }}
-                error={showErrors && coverageErrors.faceAmount}
-                helperText={showErrors && coverageErrors.faceAmount}
+                error={(showErrors && coverageErrors.faceAmount) || (coverage.faceAmount && (Number(coverage.faceAmount) < 10000 || Number(coverage.faceAmount) > 5000000))}
+                helperText={(showErrors && coverageErrors.faceAmount) || "Minimum $10,000 Maximum $5,000,000"}
               />
               <FormControl fullWidth>
                 <InputLabel>Table Rating</InputLabel>

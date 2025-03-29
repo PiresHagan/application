@@ -299,12 +299,20 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
           label="Face Amount"
           type="number"
           value={data.faceAmount}
-          onChange={(e) => onChange({ ...data, faceAmount: e.target.value })}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            const isValid = newValue && Number(newValue) >= 10000 && Number(newValue) <= 5000000;
+            onChange({ 
+              ...data, 
+              faceAmount: newValue,
+              faceAmountValid: isValid  
+            });
+          }}
           InputProps={{
             startAdornment: '$',
           }}
-          error={showErrors && errors.faceAmount}
-          helperText={showErrors && errors.faceAmount}
+          error={(showErrors && errors.faceAmount) || (data.faceAmount && (Number(data.faceAmount) < 10000 || Number(data.faceAmount) > 5000000))}
+          helperText={(showErrors && errors.faceAmount) || "Minimum $10,000 Maximum $5,000,000"}
         />
         <FormControl fullWidth>
           <InputLabel>Table Rating</InputLabel>
