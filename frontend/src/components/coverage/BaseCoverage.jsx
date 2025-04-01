@@ -92,7 +92,9 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
 
         dispatch(addCoverageOwner({
           ...newOwner,
-          clientGUID: response.clientGUID
+          clientGUID: response.clientGUID,
+          roleGUID: response.roleGUID,
+          roleCode: response.roleCode
         }));
       }
 

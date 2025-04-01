@@ -55,8 +55,7 @@ const mapClientFromInsured = (insured) => {
 };
 
 const mapCoverage = (coverage, type, index, owners) => {
-  // Find the insured owners
-  const insured1 = owners.find(owner => owner.id === coverage.insured1);
+  const insured1 = owners.find(owner => owner.id == coverage.insured1);
   const insured2 = coverage.insured2 ? owners.find(owner => owner.id === coverage.insured2) : null;
   
   const roles = [];
@@ -125,10 +124,11 @@ const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCovera
   );
   
   const allCoverages = [baseCoverage, ...mappedAdditionalCoverages];
-  
+  // console.log(productData);
   const request = {
     application: {
       PlanGUID: productData.planGUID,
+      PlanCode: productData.planCode,
       ApplicationFormGUID: applicationNumber || 'APP-000000',
       roles: ownerRoles,
       coverages: allCoverages
@@ -142,6 +142,7 @@ const buildPremiumCalcRequest = (productData, baseCoverageData, additionalCovera
 
 export const createPremiumCalcRequest = (state, applicationNumber, forceInitialCalculation = false) => {
   const productData = state.coverage.product;
+  console.log(productData);
   const baseCoverageData = state.coverage.base;
   const additionalCoverages = state.coverage.additional || [];
   const riders = state.coverage.riders || [];

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -44,5 +45,13 @@ public class CoverageController {
             return ResponseEntity.badRequest().body(JsonNodeFactory.instance.objectNode()
                 .put("error", "Failed to calculate premium: " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/additional-definitions/{planGUID}")
+    public ResponseEntity<List<Map<String, String>>> getAdditionalCoverageDefinitions(
+            @PathVariable String planGUID) {
+        log.info("Fetching additional coverage definitions for plan: {}", planGUID);
+        List<Map<String, String>> definitions = coverageService.getAdditionalCoverageDefinitions(planGUID);
+        return ResponseEntity.ok(definitions);
     }
 } 

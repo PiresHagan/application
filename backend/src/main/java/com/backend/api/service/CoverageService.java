@@ -275,4 +275,34 @@ public class CoverageService {
         }
         return code;
     }
+
+    /**
+     * Retrieves additional coverage definitions for the specified plan.
+     * 
+     * @param planGUID The GUID of the plan
+     * @return List of coverage definitions with CoverageDefinitionGUID and CoverageName
+     */
+    public List<Map<String, String>> getAdditionalCoverageDefinitions(String planGUID) {
+        log.info("Getting additional coverage definitions for plan: {}", planGUID);
+        
+        String sql = """
+            SELECT CoverageDefinitionGUID, CoverageName 
+            FROM frcoveragedefinition 
+            WHERE PlanGUID = ? AND CoverageCode = '02'
+            """;
+            
+        try {
+            return jdbcTemplate.query(sql, 
+                (rs, rowNum) -> {
+                    Map<String, String> definition = new HashMap<>();
+                    definition.put("coverageDefinitionGUID", rs.getString("CoverageDefinitionGUID"));
+                    definition.put("coverageName", rs.getString("CoverageName"));
+                    return definition;
+                },
+                planGUID);
+        } catch (Exception e) {
+            log.error("Error fetching additional coverage definitions: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
 } 

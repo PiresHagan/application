@@ -17,8 +17,8 @@ public class InsuredController {
 
     @PostMapping
     public ResponseEntity<Map<String, String>> saveInsured(@RequestBody InsuredSaveRequest request) {
-        String clientGUID = insuredService.saveInsured(request);
-        return ResponseEntity.ok(Map.of("clientGUID", clientGUID));
+        Map<String, String> result = insuredService.saveInsured(request);
+        return ResponseEntity.ok(result);
     }
 
     @PutMapping("/{clientGUID}")

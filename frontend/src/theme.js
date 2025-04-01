@@ -33,13 +33,17 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: '8px',
-          backgroundColor: '#F5F5F5',
+          // backgroundColor: '#F5F5F5',
           '&:hover .MuiOutlinedInput-notchedOutline': {
             borderColor: '#ddd',
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
             borderColor: '#6246EA',
             borderWidth: '2px',
+          },
+          '&.Mui-disabled': {
+            backgroundColor: '#FFFFFF',
+            opacity: 0.5,
           },
         },
         notchedOutline: {
@@ -54,7 +58,7 @@ const theme = createTheme({
       styleOverrides: {
         select: {
           borderRadius: '8px',
-          backgroundColor: '#F5F5F5',
+          // backgroundColor: '#F5F5F5',
         }
       }
     },
@@ -78,6 +82,10 @@ const theme = createTheme({
           '&::before': {
             display: 'none',
           },
+          '&.Mui-disabled': {
+            backgroundColor: '#FFFFFF',
+            opacity: 0.5,
+          },
         }
       }
     },
@@ -85,6 +93,16 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           padding: '0 16px',
+          '&.Mui-disabled': {
+            opacity: 1,
+            backgroundColor: '#FFFFFF',
+          },
+        },
+        content: {
+          '&.Mui-disabled': {
+            opacity: 1,
+            backgroundColor: '#FFFFFF',
+          },
         }
       }
     },

@@ -38,6 +38,10 @@ export const createApiSlice = apiSlice.injectEndpoints({
       query: (productGUID) => `/api/products/${productGUID}/plans`,
       keepUnusedDataFor: 600,
     }),
+    getAdditionalCoverageDefinitions: builder.query({
+      query: (planGUID) => `/api/coverage/additional-definitions/${planGUID}`,
+      keepUnusedDataFor: 600,
+    }),
     updateApplicationPlan: builder.mutation({
       query: ({ applicationNumber, planGUID }) => ({
         url: `/api/products/application/${applicationNumber}/plan`,
@@ -64,6 +68,7 @@ export const {
   useGetFormOwnersQuery,
   useGetCompanyProductsQuery,
   useGetProductPlansQuery,
+  useGetAdditionalCoverageDefinitionsQuery,
   useUpdateApplicationPlanMutation,
   useSaveBaseCoverageMutation,
 } = createApiSlice; 

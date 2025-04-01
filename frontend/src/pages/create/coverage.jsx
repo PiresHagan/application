@@ -778,7 +778,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
       setProductDataState(prev => ({
         ...prev,
         plan: firstPlan.PlanName,
-        planGUID: firstPlan.PlanGUID
+        planGUID: firstPlan.PlanGUID,
+        planCode: firstPlan.PlanCode
       }));
     }
   }, [productData]);
@@ -895,7 +896,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
                       setProductDataState({
                         ...productData,
                         plan: e.target.value,
-                        planGUID: selectedPlan ? selectedPlan.PlanGUID : ''
+                        planGUID: selectedPlan ? selectedPlan.PlanGUID : '',
+                        planCode: selectedPlan ? selectedPlan.PlanCode : ''
                       });
                     }}
                     label="Plan"

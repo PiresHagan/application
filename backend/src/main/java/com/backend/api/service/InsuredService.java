@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @Transactional
@@ -17,7 +19,7 @@ public class InsuredService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    public String saveInsured(InsuredSaveRequest request) {
+    public Map<String, String> saveInsured(InsuredSaveRequest request) {
         String clientGUID = UUID.randomUUID().toString();
         String roleGUID = UUID.randomUUID().toString();
         log.info("Saving insured: {}", request);
@@ -46,15 +48,22 @@ public class InsuredService {
             request.getStateCode(), request.getSsn()
         );
         
+        String roleCode = "02";
+        
         jdbcTemplate.update("""
             INSERT INTO frrole (
                 RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, StatusCode
             ) VALUES (?, ?, ?, ?, ?)
             """,
-            roleGUID, "02", clientGUID, applicationFormGUID, "01"
+            roleGUID, roleCode, clientGUID, applicationFormGUID, "01"
         );
 
-        return clientGUID;
+        Map<String, String> result = new HashMap<>();
+        result.put("clientGUID", clientGUID);
+        result.put("roleGUID", roleGUID);
+        result.put("roleCode", roleCode);
+        
+        return result;
     }
 
     public void updateInsured(String clientGUID, InsuredSaveRequest request) {

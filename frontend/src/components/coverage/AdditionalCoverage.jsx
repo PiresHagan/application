@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { addCoverageOwner, updateCoverageOwner } from '../../slices/coverageOwnersSlice';
-import { useSaveInsuredMutation, useUpdateInsuredMutation } from '../../slices/createApiSlice';
+import { useSaveInsuredMutation, useUpdateInsuredMutation, useGetAdditionalCoverageDefinitionsQuery } from '../../slices/createApiSlice';
 import { toast } from 'react-toastify';
 import AddOwnerModal from './AddOwnerModal';
 import EditIcon from '@mui/icons-material/Edit';
@@ -37,7 +37,14 @@ function AdditionalCoverage({
   const dispatch = useDispatch();
   const [saveInsured] = useSaveInsuredMutation();
   const [updateInsured] = useUpdateInsuredMutation();
-
+  
+  // Get the current application's plan GUID from Redux
+  const planGUID = useSelector(state => state.coverage.product?.planGUID);
+  
+  // Fetch coverage definitions from the API
+  const { data: coverageDefinitions = [], isLoading: isLoadingDefinitions } = 
+    useGetAdditionalCoverageDefinitionsQuery(planGUID, { skip: !planGUID });
+  
   const [isAddOwnerModalOpen, setIsAddOwnerModalOpen] = useState(false);
   const [editingOwner, setEditingOwner] = useState(null);
   const [activeCoverageId, setActiveCoverageId] = useState(null);
@@ -48,6 +55,23 @@ function AdditionalCoverage({
   const underwritingOptions = ['Standard', 'Standard Plus', 'Preferred', 'Preferred Plus'];
 
   const coverageOptions = ['Term 10', 'Term 20', 'Term 30', 'Term 100'];
+
+  // Update existing coverages with coverageDefinitionGUID if needed
+  useEffect(() => {
+    if (coverageDefinitions.length > 0 && coverages.length > 0) {
+      coverages.forEach(coverage => {
+        // If the coverage has a name but no GUID, try to find and set the GUID
+        if (coverage.coverage && !coverage.coverageDefinitionGUID) {
+          const matchingDef = coverageDefinitions.find(def => 
+            def.coverageName === coverage.coverage);
+          
+          if (matchingDef) {
+            onChange('coverageDefinitionGUID', matchingDef.coverageDefinitionGUID, coverage.id);
+          }
+        }
+      });
+    }
+  }, [coverageDefinitions, coverages]);
 
   const handleCoverageChange = (id, field, value) => {
     onChange(field, value, id);
@@ -98,7 +122,9 @@ function AdditionalCoverage({
 
         dispatch(addCoverageOwner({
           ...newOwner,
-          clientGUID: response.clientGUID
+          clientGUID: response.clientGUID,
+          roleGUID: response.roleGUID,
+          roleCode: response.roleCode
         }));
       }
 
@@ -169,12 +195,29 @@ function AdditionalCoverage({
               >
                 <InputLabel>Coverage</InputLabel>
                 <Select
-                  value={coverage.coverage}
-                  onChange={(e) => handleCoverageChange(coverage.id, 'coverage', e.target.value)}
+                  value={coverage.coverage || ''}
+                  onChange={(e) => {
+                    const selectedCoverage = e.target.value;
+                    const selectedDef = coverageDefinitions.find(def => 
+                      def.coverageName === selectedCoverage);
+                    
+                    // Update both the coverage name and its definition GUID
+                    const updates = {
+                      id: coverage.id,
+                      updates: {
+                        coverage: selectedCoverage,
+                        coverageDefinitionGUID: selectedDef ? selectedDef.coverageDefinitionGUID : ''
+                      }
+                    };
+                    onChange('_multipleFields', updates, coverage.id);
+                  }}
                   label="Coverage"
+                  disabled={isLoadingDefinitions}
                 >
-                  {coverageOptions.map(option => (
-                    <MenuItem key={option} value={option}>{option}</MenuItem>
+                  {coverageDefinitions.map(definition => (
+                    <MenuItem key={definition.coverageDefinitionGUID} value={definition.coverageName}>
+                      {definition.coverageName}
+                    </MenuItem>
                   ))}
                 </Select>
                 {showErrors && coverageErrors.coverage && (
