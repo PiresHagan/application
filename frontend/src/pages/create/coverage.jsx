@@ -638,6 +638,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
         }).unwrap();
       }
 
+      console.log('Saving base coverage with data:', enhancedBaseCoverageData);
+
       const response = await saveBaseCoverage({
         applicationNumber,
         coverageData: enhancedBaseCoverageData

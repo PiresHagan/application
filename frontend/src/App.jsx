@@ -11,6 +11,7 @@ import Counter from './pages/counter/counter';
 import Create from './pages/create';
 import Register from './pages/Auth/Register';
 import Login from './pages/Auth/login';
+import Search from './pages/search';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/application/create" element={<Create />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/application/search" element={<Search />} />
           {/* <Route path="*" element={<Navigate to="/" />} /> */}
         </Routes>
       </Layout>

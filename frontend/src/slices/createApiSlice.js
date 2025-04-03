@@ -57,6 +57,22 @@ export const createApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['ApplicationData', 'FormOwners'],
     }),
+    searchApplications: builder.query({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.applicationNumber) queryParams.append('applicationNumber', params.applicationNumber);
+        if (params.firstName) queryParams.append('firstName', params.firstName);
+        if (params.lastName) queryParams.append('lastName', params.lastName);
+        if (params.companyName) queryParams.append('companyName', params.companyName);
+        if (params.ownerType) queryParams.append('ownerType', params.ownerType);
+        
+        return {
+          url: `/api/search/application?${queryParams.toString()}`,
+          method: 'GET',
+        };
+      },
+      keepUnusedDataFor: 0, 
+    }),
   }),
 });
 
@@ -71,4 +87,5 @@ export const {
   useGetAdditionalCoverageDefinitionsQuery,
   useUpdateApplicationPlanMutation,
   useSaveBaseCoverageMutation,
+  useSearchApplicationsQuery,
 } = createApiSlice; 
