@@ -66,12 +66,15 @@ export const createApiSlice = apiSlice.injectEndpoints({
         if (params.companyName) queryParams.append('companyName', params.companyName);
         if (params.ownerType) queryParams.append('ownerType', params.ownerType);
         
+        if (params.page !== undefined) queryParams.append('page', params.page);
+        if (params.size !== undefined) queryParams.append('size', params.size);
+        
         return {
           url: `/api/search/application?${queryParams.toString()}`,
           method: 'GET',
         };
       },
-      keepUnusedDataFor: 0, 
+      keepUnusedDataFor: 0,
     }),
   }),
 });

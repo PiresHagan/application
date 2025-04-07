@@ -17,8 +17,8 @@ public class SearchService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    public List<Map<String, Object>> searchByApplicationNumber(String applicationNumber) {
-        log.info("Searching for application with number: {}", applicationNumber);
+    public List<Map<String, Object>> searchByApplicationNumber(String applicationNumber, int page, int size) {
+        log.info("Searching for application with number: {} (page: {}, size: {})", applicationNumber, page, size);
 
         String sql = """
             SELECT 
@@ -41,13 +41,26 @@ public class SearchService {
             LEFT JOIN fraddressdetails ad ON a.AddressGUID = ad.AddressGUID
             WHERE af.ApplicationFormNumber LIKE ? AND r.RoleCode = '01'
             ORDER BY af.LastModifiedDate DESC
+            LIMIT ? OFFSET ?
         """;
 
-        return executeQuery(sql, "%" + applicationNumber + "%");
+        return executeQuery(sql, "%" + applicationNumber + "%", size, page * size);
     }
 
-    public List<Map<String, Object>> searchByIndividualOwner(String firstName, String lastName) {
-        log.info("Searching for applications with individual owner - firstName: {}, lastName: {}", firstName, lastName);
+    public long countByApplicationNumber(String applicationNumber) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM frapplicationform af
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
+            WHERE af.ApplicationFormNumber LIKE ? AND r.RoleCode = '01'
+        """;
+        
+        return jdbcTemplate.queryForObject(sql, Long.class, "%" + applicationNumber + "%");
+    }
+
+    public List<Map<String, Object>> searchByIndividualOwner(String firstName, String lastName, int page, int size) {
+        log.info("Searching for applications with individual owner - firstName: {}, lastName: {} (page: {}, size: {})", 
+                firstName, lastName, page, size);
 
         String sql = """
             SELECT 
@@ -71,16 +84,36 @@ public class SearchService {
             AND c.TypeCode = '01'
             AND (c.FirstName LIKE ? OR c.LastName LIKE ?)
             ORDER BY af.LastModifiedDate DESC
+            LIMIT ? OFFSET ?
         """;
 
         return executeQuery(sql, 
+            firstName != null && !firstName.isEmpty() ? "%" + firstName + "%" : "%",
+            lastName != null && !lastName.isEmpty() ? "%" + lastName + "%" : "%",
+            size, page * size
+        );
+    }
+
+    public long countByIndividualOwner(String firstName, String lastName) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM frapplicationform af
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
+            JOIN frclient c ON r.ClientGUID = c.ClientGUID
+            WHERE r.RoleCode = '01' 
+            AND c.TypeCode = '01'
+            AND (c.FirstName LIKE ? OR c.LastName LIKE ?)
+        """;
+        
+        return jdbcTemplate.queryForObject(sql, Long.class,
             firstName != null && !firstName.isEmpty() ? "%" + firstName + "%" : "%",
             lastName != null && !lastName.isEmpty() ? "%" + lastName + "%" : "%"
         );
     }
 
-    public List<Map<String, Object>> searchByCorporateOwner(String companyName) {
-        log.info("Searching for applications with corporate owner - companyName: {}", companyName);
+    public List<Map<String, Object>> searchByCorporateOwner(String companyName, int page, int size) {
+        log.info("Searching for applications with corporate owner - companyName: {} (page: {}, size: {})", 
+                companyName, page, size);
 
         String sql = """
             SELECT 
@@ -102,13 +135,28 @@ public class SearchService {
             AND c.TypeCode = '02'
             AND c.CompanyName LIKE ?
             ORDER BY af.LastModifiedDate DESC
+            LIMIT ? OFFSET ?
         """;
 
-        return executeQuery(sql, "%" + companyName + "%");
+        return executeQuery(sql, "%" + companyName + "%", size, page * size);
     }
 
-    public List<Map<String, Object>> getAllApplications() {
-        log.info("Retrieving all applications");
+    public long countByCorporateOwner(String companyName) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM frapplicationform af
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
+            JOIN frclient c ON r.ClientGUID = c.ClientGUID
+            WHERE r.RoleCode = '01' 
+            AND c.TypeCode = '02'
+            AND c.CompanyName LIKE ?
+        """;
+        
+        return jdbcTemplate.queryForObject(sql, Long.class, "%" + companyName + "%");
+    }
+
+    public List<Map<String, Object>> getAllApplications(int page, int size) {
+        log.info("Retrieving all applications (page: {}, size: {})", page, size);
 
         String sql = """
             SELECT 
@@ -131,10 +179,21 @@ public class SearchService {
             LEFT JOIN fraddressdetails ad ON a.AddressGUID = ad.AddressGUID
             WHERE r.RoleCode = '01'
             ORDER BY af.LastModifiedDate DESC
-            LIMIT 50
+            LIMIT ? OFFSET ?
         """;
 
-        return executeQuery(sql);
+        return executeQuery(sql, size, page * size);
+    }
+
+    public long countAllApplications() {
+        String sql = """
+            SELECT COUNT(*)
+            FROM frapplicationform af
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
+            WHERE r.RoleCode = '01'
+        """;
+        
+        return jdbcTemplate.queryForObject(sql, Long.class);
     }
 
     private List<Map<String, Object>> executeQuery(String sql, Object... args) {
@@ -145,20 +204,25 @@ public class SearchService {
                 
                 String ownerType = rs.getString("ownerType");
                 if (ownerType == null) {
-                    ownerType = "01"; // Default to individual if not provided
+                    ownerType = "01"; 
                 }
                 
                 if (ownerType.equals("01")) { // Individual
                     result.put("ownerName", rs.getString("firstName") + " " + rs.getString("lastName"));
                     result.put("dateOfBirth", rs.getDate("dateOfBirth") != null ? 
                         rs.getDate("dateOfBirth").toString() : null);
-                } else { // Corporate
+                } else { 
                     result.put("companyName", rs.getString("companyName"));
                 }
                 
                 result.put("primaryAddress", rs.getString("primaryAddress"));
-                result.put("lastModifiedDate", rs.getTimestamp("lastModifiedDate") != null ? 
-                    rs.getTimestamp("lastModifiedDate").toString() : null);
+                
+                if (rs.getTimestamp("lastModifiedDate") != null) {
+                    java.sql.Date date = new java.sql.Date(rs.getTimestamp("lastModifiedDate").getTime());
+                    result.put("lastModifiedDate", date.toString());
+                } else {
+                    result.put("lastModifiedDate", null);
+                }
                 
                 String statusCode = rs.getString("status");
                 result.put("status", mapStatusCode(statusCode));

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/search")
@@ -19,32 +20,45 @@ public class SearchController {
     private final SearchService searchService;
     
     @GetMapping("/application")
-    public ResponseEntity<List<Map<String, Object>>> searchApplications(
+    public ResponseEntity<Map<String, Object>> searchApplications(
             @RequestParam(required = false) String applicationNumber,
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String lastName,
             @RequestParam(required = false) String companyName,
-            @RequestParam(required = false) String ownerType) {
+            @RequestParam(required = false) String ownerType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         
-        log.info("Search request received - applicationNumber: {}, firstName: {}, lastName: {}, companyName: {}, ownerType: {}", 
-                applicationNumber, firstName, lastName, companyName, ownerType);
+        log.info("Search request received - applicationNumber: {}, firstName: {}, lastName: {}, companyName: {}, ownerType: {}, page: {}, size: {}", 
+                applicationNumber, firstName, lastName, companyName, ownerType, page, size);
         
+        Map<String, Object> response = new HashMap<>();
         List<Map<String, Object>> results;
+        long totalItems = 0;
         
         if (applicationNumber != null && !applicationNumber.isEmpty()) {
-            results = searchService.searchByApplicationNumber(applicationNumber);
-            log.info("Search results: {}", results);
+            results = searchService.searchByApplicationNumber(applicationNumber, page, size);
+            totalItems = searchService.countByApplicationNumber(applicationNumber);
         } else if (ownerType != null && ownerType.equals("individual")) {
-            results = searchService.searchByIndividualOwner(firstName, lastName);
-            log.info("Search results: {}", results);
+            results = searchService.searchByIndividualOwner(firstName, lastName, page, size);
+            totalItems = searchService.countByIndividualOwner(firstName, lastName);
         } else if (ownerType != null && ownerType.equals("corporate")) {
-            results = searchService.searchByCorporateOwner(companyName);
-            log.info("Search results: {}", results);
+            results = searchService.searchByCorporateOwner(companyName, page, size);
+            totalItems = searchService.countByCorporateOwner(companyName);
         } else {
-            results = searchService.getAllApplications();
-            log.info("Search results: {}", results);
+            results = searchService.getAllApplications(page, size);
+            totalItems = searchService.countAllApplications();
         }
         
-        return ResponseEntity.ok(results);
+        int totalPages = (int) Math.ceil((double) totalItems / size);
+        
+        response.put("content", results);
+        response.put("currentPage", page);
+        response.put("totalItems", totalItems);
+        response.put("totalPages", totalPages);
+        
+        log.info("Search results: found {} total items, returning page {} of {}", totalItems, page, totalPages);
+        
+        return ResponseEntity.ok(response);
     }
 } 

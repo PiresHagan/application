@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -19,9 +19,16 @@ import {
   TableHead,
   TableRow,
   Grid,
-  CircularProgress
+  CircularProgress,
+  Pagination,
+  Stack,
+  Popover,
+  Checkbox,
+  ListItemText,
+  IconButton,
+  Tooltip
 } from '@mui/material';
-import { Search as SearchIcon } from '@mui/icons-material';
+import { Search as SearchIcon, FilterList as FilterIcon } from '@mui/icons-material';
 import { useSearchApplicationsQuery } from '../../slices/createApiSlice';
 
 const SearchPage = () => {
@@ -32,24 +39,85 @@ const SearchPage = () => {
   const [lastName, setLastName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [searchParams, setSearchParams] = useState(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  
+  // Status filter state
+  const [statusFilter, setStatusFilter] = useState([]);
+  const [statusAnchorEl, setStatusAnchorEl] = useState(null);
+  const statusFilterRef = useRef(null);
+  
+  const statusOptions = [
+    'In Progress',
+    'Submitted',
+    'In Review',
+    'Approved',
+    'Declined'
+  ];
   
   const { 
-    data: searchResults = [], 
+    data: searchResponse = { content: [], totalPages: 0, totalItems: 0, currentPage: 0 }, 
     isLoading, 
     isError, 
     error 
-  } = useSearchApplicationsQuery(searchParams || {}, {
-    skip: !searchParams, 
-  });
+  } = useSearchApplicationsQuery(
+    searchParams ? { ...searchParams, page, size: pageSize } : null, 
+    {
+      skip: !searchParams,
+    }
+  );
+
+  let searchResults = searchResponse.content || [];
+  
+  // Apply status filter to results
+  if (statusFilter.length > 0) {
+    searchResults = searchResults.filter(result => statusFilter.includes(result.status));
+  }
 
   const handleSearchByChange = (event) => {
     setSearchBy(event.target.value);
     setSearchParams(null);
+    setPage(0);
   };
 
   const handleOwnerTypeChange = (event) => {
     setOwnerType(event.target.value);
     setSearchParams(null);
+    setPage(0);
+  };
+
+  const handlePageSizeChange = (event) => {
+    setPageSize(parseInt(event.target.value));
+    setPage(0);
+  };
+
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage - 1); 
+  };
+
+  const handleStatusFilterClick = (event) => {
+    setStatusAnchorEl(event.currentTarget);
+  };
+
+  const handleStatusFilterClose = () => {
+    setStatusAnchorEl(null);
+  };
+
+  const handleStatusFilterChange = (event, status) => {
+    const selectedStatus = event.target.value;
+    
+    setStatusFilter(prevSelected => {
+      if (prevSelected.includes(selectedStatus)) {
+        return prevSelected.filter(item => item !== selectedStatus);
+      } else {
+        return [...prevSelected, selectedStatus];
+      }
+    });
+  };
+
+  const handleClearStatusFilter = () => {
+    setStatusFilter([]);
+    setStatusAnchorEl(null);
   };
 
   const handleSearch = () => {
@@ -69,6 +137,7 @@ const SearchPage = () => {
     }
     
     setSearchParams(params);
+    setPage(0);
   };
 
   const clearSearch = () => {
@@ -77,6 +146,8 @@ const SearchPage = () => {
     setLastName('');
     setCompanyName('');
     setSearchParams(null);
+    setPage(0);
+    setStatusFilter([]);
   };
 
   return (
@@ -177,9 +248,24 @@ const SearchPage = () => {
       
       {searchParams && (
         <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Search Results
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              Search Results
+            </Typography>
+            
+            <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Results per page</InputLabel>
+              <Select
+                value={pageSize}
+                onChange={handlePageSizeChange}
+                label="Results per page"
+              >
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+                <MenuItem value={100}>100</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
           
           {isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -189,49 +275,131 @@ const SearchPage = () => {
             <Typography color="error" sx={{ textAlign: 'center', py: 3 }}>
               Error: {error?.data?.message || 'Failed to fetch results. Please try again.'}
             </Typography>
-          ) : searchResults.length === 0 ? (
-            <Typography sx={{ textAlign: 'center', py: 3 }}>
-              No applications found matching your search criteria
-            </Typography>
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Application #</TableCell>
-                    {searchResults[0]?.ownerType === '01' ? (
-                      <>
-                        <TableCell>Owner Name</TableCell>
-                        <TableCell>Date of Birth</TableCell>
-                      </>
-                    ) : (
-                      <TableCell>Company Name</TableCell>
-                    )}
-                    <TableCell>Primary Address</TableCell>
-                    <TableCell>Last Modified</TableCell>
-                    <TableCell>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {searchResults.map((result, index) => (
-                    <TableRow key={index} hover sx={{ cursor: 'pointer' }}>
-                      <TableCell>{result.applicationNumber}</TableCell>
-                      {result.ownerType === '01' ? (
+            <>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Application #</TableCell>
+                      {!searchResults.length || searchResults[0]?.ownerType === '01' ? (
                         <>
-                          <TableCell>{result.ownerName}</TableCell>
-                          <TableCell>{result.dateOfBirth}</TableCell>
+                          <TableCell>Owner Name</TableCell>
+                          <TableCell>Date of Birth</TableCell>
                         </>
                       ) : (
-                        <TableCell>{result.companyName}</TableCell>
+                        <TableCell>Company Name</TableCell>
                       )}
-                      <TableCell>{result.primaryAddress}</TableCell>
-                      <TableCell>{result.lastModifiedDate}</TableCell>
-                      <TableCell>{result.status}</TableCell>
+                      <TableCell>Primary Address</TableCell>
+                      <TableCell>Last Modified</TableCell>
+                      <TableCell>
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            cursor: 'pointer'
+                          }}
+                          onClick={handleStatusFilterClick}
+                          ref={statusFilterRef}
+                        >
+                          Status
+                          <Tooltip title="Filter by status">
+                            <IconButton size="small" sx={{ ml: 0.5 }}>
+                              <FilterIcon 
+                                fontSize="small" 
+                                color={statusFilter.length > 0 ? "primary" : "action"} 
+                              />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                        
+                        <Popover
+                          open={Boolean(statusAnchorEl)}
+                          anchorEl={statusAnchorEl}
+                          onClose={handleStatusFilterClose}
+                          anchorOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'right',
+                          }}
+                          transformOrigin={{
+                            vertical: 'top',
+                            horizontal: 'right',
+                          }}
+                        >
+                          <Box sx={{ p: 2, width: 200 }}>
+                            <Typography variant="subtitle1" sx={{ mb: 1 }}>Filter by Status</Typography>
+                            {statusOptions.map((status) => (
+                              <MenuItem key={status} dense>
+                                <Checkbox 
+                                  checked={statusFilter.includes(status)}
+                                  onChange={(e) => handleStatusFilterChange(e, status)}
+                                  value={status}
+                                />
+                                <ListItemText primary={status} />
+                              </MenuItem>
+                            ))}
+                            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                              <Button 
+                                size="small" 
+                                onClick={handleClearStatusFilter}
+                                disabled={statusFilter.length === 0}
+                              >
+                                Clear Filters
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Popover>
+                      </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  {searchResults.length > 0 ? (
+                    <TableBody>
+                      {searchResults.map((result, index) => (
+                        <TableRow key={index} hover sx={{ cursor: 'pointer' }}>
+                          <TableCell>{result.applicationNumber}</TableCell>
+                          {result.ownerType === '01' ? (
+                            <>
+                              <TableCell>{result.ownerName}</TableCell>
+                              <TableCell>{result.dateOfBirth}</TableCell>
+                            </>
+                          ) : (
+                            <TableCell>{result.companyName}</TableCell>
+                          )}
+                          <TableCell>{result.primaryAddress}</TableCell>
+                          <TableCell>{result.lastModifiedDate}</TableCell>
+                          <TableCell>{result.status}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  ) : (
+                    <TableBody>
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                          No applications found matching your search criteria
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  )}
+                </Table>
+              </TableContainer>
+              
+              {searchResponse.totalPages > 0 && (
+                <Stack direction="row" spacing={2} sx={{ mt: 3, justifyContent: 'center' }}>
+                  <Typography variant="body2" sx={{ alignSelf: 'center' }}>
+                    Showing {searchResults.length} of {searchResponse.totalItems} results
+                    {statusFilter.length > 0 && ` (filtered)`}
+                  </Typography>
+                  <Pagination
+                    count={searchResponse.totalPages}
+                    page={searchResponse.currentPage + 1}
+                    onChange={handlePageChange}
+                    color="primary"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Stack>
+              )}
+            </>
           )}
         </Paper>
       )}
