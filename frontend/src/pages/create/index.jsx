@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Owner from './owner';
 import Coverage from './coverage';
 import Medical from './medical';
+import Beneficiary from './beneficiary';
 import { Box, Button, Container, Step, StepLabel, Stepper, Typography, Tooltip } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { nextStep, previousStep, setActiveStep, setStepValid } from '../../slices/stepSlice';
@@ -24,12 +25,17 @@ function Create() {
           applicationNumber={applicationNumber}
           onStepComplete={(isComplete) => handleStepCompletion(1, isComplete)}
         />;
-      case 2:
+      case 3:
         return <Medical
           applicationNumber={applicationNumber}
           onStepComplete={(isComplete) => handleStepCompletion(2, isComplete)}
         />;
-      case 3:
+      case 2:
+        return <Beneficiary
+          applicationNumber={applicationNumber}
+          onStepComplete={(isComplete) => handleStepCompletion(3, isComplete)}
+        />;
+      case 4:
         return <></>;
       default:
         return <div>Not Found</div>;
