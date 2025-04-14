@@ -32,8 +32,6 @@ public class SecurityConfig {
         "/api/users/register", 
         "/api/users/login",
         "/api/dropdowns",
-        "/api/owners",
-        "/api/insured",
         "/api/insured/{clientGUID}",
         "/api/form/{formNumber}/owners",
         "/api/products/company/{companyName}",
@@ -42,8 +40,7 @@ public class SecurityConfig {
         "/api/coverage/base/{applicationNumber}",
         "/api/coverage/premium/calculate",
         "/api/coverage/premium/refresh",
-        "/api/coverage/additional-definitions/{planGUID}",
-        "/api/search/application"
+        "/api/coverage/additional-definitions/{planGUID}"
     };
 
     @Bean

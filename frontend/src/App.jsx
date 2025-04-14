@@ -6,11 +6,12 @@ import Layout from './layouts/layout';
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './theme';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import Counter from './pages/counter/counter';
 import Create from './pages/create';
 import Register from './pages/Auth/Register';
-import Login from './pages/Auth/login';
+import Login from './pages/Auth/Login';
 import Search from './pages/search';
 
 function App() {
@@ -20,11 +21,26 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/counter" element={<Counter />} />
-          <Route path="/application/create" element={<Create />} />
+          <Route 
+            path="/application/create" 
+            element={
+              <ProtectedRoute>
+                <Create />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/application/search" element={<Search />} />
-          {/* <Route path="*" element={<Navigate to="/" />} /> */}
+          <Route 
+            path="/application/search" 
+            element={
+              <ProtectedRoute>
+                <Search />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </Layout>
       <ToastContainer />

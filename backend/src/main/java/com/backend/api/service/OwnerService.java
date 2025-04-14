@@ -3,6 +3,9 @@ package com.backend.api.service;
 import com.backend.api.dto.OwnerSaveRequest;
 import com.backend.api.dto.OwnerSaveRequest.OwnerDTO;
 import com.backend.api.dto.OwnerSaveRequest.AddressDTO;
+import com.backend.api.entity.User;
+import com.backend.api.repository.UserRepository;
+import com.backend.api.security.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,9 +21,15 @@ public class OwnerService {
     
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    
+    @Autowired
+    private UserRepository userRepository;
 
     public void saveOwners(OwnerSaveRequest request) {
         String applicationFormNumber = request.getApplicationFormNumber();
+        
+        String currentUsername = SecurityUtils.getCurrentUsername();
+        log.info("Current logged-in user: {}", currentUsername);
         
         for (OwnerDTO owner : request.getOwners()) {
             String clientGUID = UUID.randomUUID().toString();
@@ -60,6 +69,25 @@ public class OwnerService {
                 roleGUID, "01", clientGUID, applicationFormGUID, "01"
             );
             
+            if (currentUsername != null) {
+                User currentUser = userRepository.findByEmail(currentUsername).orElse(null);
+                if (currentUser != null) {
+                    log.info("Saving agent role for user: {}", currentUser.getName());
+                    
+                    String agentClientGUID = getOrCreateClientForUser(currentUser);
+                    
+                    String agentRoleGUID = UUID.randomUUID().toString();
+                    jdbcTemplate.update("""
+                        INSERT INTO frrole (
+                            RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, StatusCode
+                        ) VALUES (?, ?, ?, ?, ?)
+                        """,
+                        agentRoleGUID, "03", agentClientGUID, applicationFormGUID, "01"
+                    );
+                    log.info("Agent role saved with GUID: {}", agentRoleGUID);
+                }
+            }
+            
             for (AddressDTO address : owner.getAddresses()) {
                 String addressGUID = UUID.randomUUID().toString();
                 
@@ -83,5 +111,40 @@ public class OwnerService {
                 );
             }
         }
+    }
+    
+    /**
+     * Get client GUID for a user, or create a new client record if needed
+     * @param user The user to get or create a client for
+     * @return The client GUID
+     */
+    private String getOrCreateClientForUser(User user) {
+        // Check if client record exists for this user
+        String clientGUID = jdbcTemplate.query(
+            "SELECT ClientGUID FROM frclient WHERE TypeCode = '03' AND FirstName = ? AND LastName = ?",
+            (rs, rowNum) -> rs.getString("ClientGUID"),
+            user.getName().split(" ")[0], // Assuming name format is "FirstName LastName"
+            user.getName().contains(" ") ? user.getName().substring(user.getName().indexOf(" ") + 1) : ""
+        ).stream().findFirst().orElse(null);
+        
+        // Create client record if not exists
+        if (clientGUID == null) {
+            clientGUID = UUID.randomUUID().toString();
+            String firstName = user.getName().split(" ")[0];
+            String lastName = user.getName().contains(" ") 
+                ? user.getName().substring(user.getName().indexOf(" ") + 1) 
+                : "";
+                
+            jdbcTemplate.update("""
+                INSERT INTO frclient (
+                    ClientGUID, TypeCode, FirstName, LastName
+                ) VALUES (?, ?, ?, ?)
+                """,
+                clientGUID, "03", firstName, lastName
+            );
+            log.info("Created new client record for agent with GUID: {}", clientGUID);
+        }
+        
+        return clientGUID;
     }
 } 

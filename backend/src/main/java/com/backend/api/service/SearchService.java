@@ -33,13 +33,16 @@ public class SearchService {
                       CASE WHEN ad.ZipCode IS NOT NULL THEN CONCAT(' ', ad.ZipCode) ELSE '' END) as primaryAddress,
                 af.LastModifiedDate as lastModifiedDate,
                 r.StatusCode as status,
-                c.TypeCode as ownerType
+                c.TypeCode as ownerType,
+                CONCAT(agentC.FirstName, ' ', agentC.LastName) as createdBy
             FROM frapplicationform af
-            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID AND r.RoleCode = '01'
             JOIN frclient c ON r.ClientGUID = c.ClientGUID
             LEFT JOIN fraddress a ON c.ClientGUID = a.ClientGUID AND a.TypeCode = '01'
             LEFT JOIN fraddressdetails ad ON a.AddressGUID = ad.AddressGUID
-            WHERE af.ApplicationFormNumber LIKE ? AND r.RoleCode = '01'
+            LEFT JOIN frrole agentR ON af.ApplicationFormGUID = agentR.ApplicationFormGUID AND agentR.RoleCode = '03'
+            LEFT JOIN frclient agentC ON agentR.ClientGUID = agentC.ClientGUID
+            WHERE af.ApplicationFormNumber LIKE ?
             ORDER BY af.LastModifiedDate DESC
             LIMIT ? OFFSET ?
         """;
@@ -51,8 +54,8 @@ public class SearchService {
         String sql = """
             SELECT COUNT(*)
             FROM frapplicationform af
-            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
-            WHERE af.ApplicationFormNumber LIKE ? AND r.RoleCode = '01'
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID AND r.RoleCode = '01'
+            WHERE af.ApplicationFormNumber LIKE ?
         """;
         
         return jdbcTemplate.queryForObject(sql, Long.class, "%" + applicationNumber + "%");
@@ -74,12 +77,15 @@ public class SearchService {
                       CASE WHEN ad.ZipCode IS NOT NULL THEN CONCAT(' ', ad.ZipCode) ELSE '' END) as primaryAddress,
                 af.LastModifiedDate as lastModifiedDate,
                 r.StatusCode as status,
-                '01' as ownerType
+                '01' as ownerType,
+                CONCAT(agentC.FirstName, ' ', agentC.LastName) as createdBy
             FROM frapplicationform af
-            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID AND r.RoleCode = '01'
             JOIN frclient c ON r.ClientGUID = c.ClientGUID
             LEFT JOIN fraddress a ON c.ClientGUID = a.ClientGUID AND a.TypeCode = '01'
             LEFT JOIN fraddressdetails ad ON a.AddressGUID = ad.AddressGUID
+            LEFT JOIN frrole agentR ON af.ApplicationFormGUID = agentR.ApplicationFormGUID AND agentR.RoleCode = '03'
+            LEFT JOIN frclient agentC ON agentR.ClientGUID = agentC.ClientGUID
             WHERE r.RoleCode = '01' 
             AND c.TypeCode = '01'
             AND (c.FirstName LIKE ? OR c.LastName LIKE ?)
@@ -125,12 +131,15 @@ public class SearchService {
                       CASE WHEN ad.ZipCode IS NOT NULL THEN CONCAT(' ', ad.ZipCode) ELSE '' END) as primaryAddress,
                 af.LastModifiedDate as lastModifiedDate,
                 r.StatusCode as status,
-                '02' as ownerType
+                '02' as ownerType,
+                CONCAT(agentC.FirstName, ' ', agentC.LastName) as createdBy
             FROM frapplicationform af
-            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID AND r.RoleCode = '01'
             JOIN frclient c ON r.ClientGUID = c.ClientGUID
             LEFT JOIN fraddress a ON c.ClientGUID = a.ClientGUID AND a.TypeCode = '01'
             LEFT JOIN fraddressdetails ad ON a.AddressGUID = ad.AddressGUID
+            LEFT JOIN frrole agentR ON af.ApplicationFormGUID = agentR.ApplicationFormGUID AND agentR.RoleCode = '03'
+            LEFT JOIN frclient agentC ON agentR.ClientGUID = agentC.ClientGUID
             WHERE r.RoleCode = '01' 
             AND c.TypeCode = '02'
             AND c.CompanyName LIKE ?
@@ -171,12 +180,15 @@ public class SearchService {
                       CASE WHEN ad.ZipCode IS NOT NULL THEN CONCAT(' ', ad.ZipCode) ELSE '' END) as primaryAddress,
                 af.LastModifiedDate as lastModifiedDate,
                 r.StatusCode as status,
-                c.TypeCode as ownerType
+                c.TypeCode as ownerType,
+                CONCAT(agentC.FirstName, ' ', agentC.LastName) as createdBy
             FROM frapplicationform af
-            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID
+            JOIN frrole r ON af.ApplicationFormGUID = r.ApplicationFormGUID AND r.RoleCode = '01'
             JOIN frclient c ON r.ClientGUID = c.ClientGUID
             LEFT JOIN fraddress a ON c.ClientGUID = a.ClientGUID AND a.TypeCode = '01'
             LEFT JOIN fraddressdetails ad ON a.AddressGUID = ad.AddressGUID
+            LEFT JOIN frrole agentR ON af.ApplicationFormGUID = agentR.ApplicationFormGUID AND agentR.RoleCode = '03'
+            LEFT JOIN frclient agentC ON agentR.ClientGUID = agentC.ClientGUID
             WHERE r.RoleCode = '01'
             ORDER BY af.LastModifiedDate DESC
             LIMIT ? OFFSET ?
@@ -227,6 +239,7 @@ public class SearchService {
                 String statusCode = rs.getString("status");
                 result.put("status", mapStatusCode(statusCode));
                 result.put("ownerType", ownerType);
+                result.put("createdBy", rs.getString("createdBy"));
                 
                 return result;
             }, args);

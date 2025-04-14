@@ -292,6 +292,7 @@ const SearchPage = () => {
                       )}
                       <TableCell>Primary Address</TableCell>
                       <TableCell>Last Modified</TableCell>
+                      <TableCell>Created By</TableCell>
                       <TableCell>
                         <Box 
                           sx={{ 
@@ -367,6 +368,7 @@ const SearchPage = () => {
                           )}
                           <TableCell>{result.primaryAddress}</TableCell>
                           <TableCell>{result.lastModifiedDate}</TableCell>
+                          <TableCell>{result.createdBy || 'N/A'}</TableCell>
                           <TableCell>{result.status}</TableCell>
                         </TableRow>
                       ))}
@@ -374,7 +376,7 @@ const SearchPage = () => {
                   ) : (
                     <TableBody>
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                        <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
                           No applications found matching your search criteria
                         </TableCell>
                       </TableRow>
