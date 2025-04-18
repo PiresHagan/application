@@ -65,12 +65,26 @@ export const createApiSlice = apiSlice.injectEndpoints({
         if (params.lastName) queryParams.append('lastName', params.lastName);
         if (params.companyName) queryParams.append('companyName', params.companyName);
         if (params.ownerType) queryParams.append('ownerType', params.ownerType);
+        if (params.currentUserOnly) queryParams.append('currentUserOnly', params.currentUserOnly);
         
         if (params.page !== undefined) queryParams.append('page', params.page);
         if (params.size !== undefined) queryParams.append('size', params.size);
         
         return {
           url: `/api/search/application?${queryParams.toString()}`,
+          method: 'GET',
+        };
+      },
+      keepUnusedDataFor: 0,
+    }),
+    getMyApplications: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page !== undefined) queryParams.append('page', params.page);
+        if (params.size !== undefined) queryParams.append('size', params.size);
+        
+        return {
+          url: `/api/search/application/my?${queryParams.toString()}`,
           method: 'GET',
         };
       },
@@ -91,4 +105,5 @@ export const {
   useUpdateApplicationPlanMutation,
   useSaveBaseCoverageMutation,
   useSearchApplicationsQuery,
+  useGetMyApplicationsQuery,
 } = createApiSlice; 

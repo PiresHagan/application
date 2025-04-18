@@ -21,6 +21,9 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, logout, userBanned } = authSlice.actions;
+export const { setCredentials, logout } = authSlice.actions;
+
+export const selectIsAdmin = (state) => 
+  state.auth.userInfo && state.auth.userInfo.role === 'ADMIN';
 
 export default authSlice.reducer; 

@@ -13,6 +13,7 @@ import Create from './pages/create';
 import Register from './pages/Auth/Register';
 import Login from './pages/Auth/Login';
 import Search from './pages/search';
+import UserManagement from './pages/admin/UserManagement';
 
 function App() {
   return (
@@ -36,6 +37,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Search />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/users" 
+            element={
+              <ProtectedRoute>
+                <UserManagement />
               </ProtectedRoute>
             } 
           />

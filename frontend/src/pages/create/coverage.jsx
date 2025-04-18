@@ -677,10 +677,11 @@ function Coverage({ applicationNumber, onStepComplete }) {
         };
       }
 
+      toast.success('Coverages saved successfully!');
       dispatch(nextStep());
     } catch (error) {
       console.error('Error saving data:', error);
-      toast.error('Error saving coverage information. Please try again.');
+      toast.error('Error saving coverage information: ' + (error.message || 'Please try again.'));
     }
   };
 

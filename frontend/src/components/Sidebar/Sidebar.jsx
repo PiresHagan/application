@@ -24,7 +24,7 @@ import {
   Login as LoginIcon,
 } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
-import { logout } from '../../slices/authSlice';
+import { logout, selectIsAdmin } from '../../slices/authSlice';
 
 function Sidebar() {
   const { userInfo } = useSelector((state) => state.auth);
@@ -33,6 +33,7 @@ function Sidebar() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeMenu, setActiveMenu] = useState(null);
   const dispatch = useDispatch();
+  const isAdmin = useSelector(selectIsAdmin);
 
   const menuItems = [
     {
@@ -73,7 +74,7 @@ function Sidebar() {
       icon: <SettingsIcon />,
       label: 'Settings',
       submenu: [
-        { label: 'Option 1', path: '/settings/option1', icon: <SearchIcon /> },
+        ...(isAdmin ? [{ label: 'User Management', path: '/admin/users', icon: <SearchIcon /> }] : []),
         { label: 'Option 2', path: '/settings/option2', icon: <SearchIcon /> },
         { label: 'Option 3', path: '/settings/option3', icon: <SearchIcon /> }
       ]
