@@ -66,7 +66,7 @@ public class OwnerService {
                     RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, StatusCode
                 ) VALUES (?, ?, ?, ?, ?)
                 """,
-                roleGUID, "01", clientGUID, applicationFormGUID, "01"
+                roleGUID, owner.getRoleCode() != null ? owner.getRoleCode() : "01", clientGUID, applicationFormGUID, "01"
             );
             
             if (currentUsername != null) {

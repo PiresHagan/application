@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Dialog,
   DialogTitle,
@@ -12,8 +13,12 @@ import ContactInfo from '../owner/ContactInfo';
 import AddressInfo from '../owner/AddressInfo';
 import { validateSection, validateField } from '../../utils/validations';
 import { toast } from 'react-toastify';
+import { useSaveOwnersMutation } from '../../slices/createApiSlice';
 
-function AddBeneficiaryModal({ open, onClose, onSave, dropdownValues, beneficiaries, editingBeneficiary }) {
+function AddBeneficiaryModal({ open, onClose, onSave, dropdownValues, beneficiaries, editingBeneficiary, applicationNumber }) {
+  const dispatch = useDispatch();
+  const [saveOwners, { isLoading }] = useSaveOwnersMutation();
+  
   const getNewId = () => {
     if (beneficiaries.length === 0) return 1;
     return Math.max(...beneficiaries.map(beneficiary => beneficiary.id)) + 1;
@@ -114,7 +119,44 @@ function AddBeneficiaryModal({ open, onClose, onSave, dropdownValues, beneficiar
     return { isValid, errors };
   };
 
-  const handleSave = () => {
+  const formatBeneficiaryAsOwner = (beneficiary) => {
+    return {
+      typeCode: '01', // Individual
+      firstName: beneficiary.firstName,
+      lastName: beneficiary.lastName,
+      dateOfBirth: beneficiary.dateOfBirth,
+      gender: beneficiary.gender,
+      tobacco: beneficiary.tobacco || 'no',
+      countryCode: beneficiary.countryCode,
+      stateCode: beneficiary.addressState,
+      ssn: beneficiary.ssn || '',
+      addresses: [
+        {
+          typeCode: '01',
+          statusCode: '01',
+          addressLine1: beneficiary.addressLine1,
+          addressLine2: beneficiary.addressLine2 || '',
+          city: beneficiary.addressCity,
+          stateCode: beneficiary.addressState,
+          countryCode: beneficiary.addressCountry,
+          zipCode: beneficiary.addressZipCode
+        },
+        ...(!beneficiary.sameAsMailingAddress ? [{
+          typeCode: '02',
+          statusCode: '01',
+          addressLine1: beneficiary.mailingAddressLine1,
+          addressLine2: beneficiary.mailingAddressLine2 || '',
+          city: beneficiary.mailingCity,
+          stateCode: beneficiary.mailingState,
+          countryCode: beneficiary.mailingAddressCountry,
+          zipCode: beneficiary.mailingZipCode
+        }] : [])
+      ],
+      roleCode: '04'
+    };
+  };
+
+  const handleSave = async () => {
     const { isValid, errors } = validateBeneficiary(true);
 
     if (!isValid) {
@@ -131,8 +173,22 @@ function AddBeneficiaryModal({ open, onClose, onSave, dropdownValues, beneficiar
       return;
     }
 
-    onSave(beneficiary);
-    onClose();
+    try {
+      if (applicationNumber) {
+        const ownerRequest = {
+          applicationFormNumber: applicationNumber,
+          owners: [formatBeneficiaryAsOwner(beneficiary)]
+        };
+        
+        await saveOwners(ownerRequest).unwrap();
+      }
+      
+      onSave(beneficiary);
+      onClose();
+    } catch (error) {
+      console.error('Error saving beneficiary:', error);
+      toast.error(`Error saving beneficiary: ${error.message || 'Unknown error'}`);
+    }
   };
 
   const handleClose = () => {
@@ -195,8 +251,8 @@ function AddBeneficiaryModal({ open, onClose, onSave, dropdownValues, beneficiar
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained">
-          {editingBeneficiary ? 'Update' : 'Save'}
+        <Button onClick={handleSave} variant="contained" disabled={isLoading}>
+          {isLoading ? 'Saving...' : (editingBeneficiary ? 'Update' : 'Save')}
         </Button>
       </DialogActions>
     </Dialog>

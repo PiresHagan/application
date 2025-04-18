@@ -22,16 +22,18 @@ function BeneficiarySection({
   planName,
   faceAmount,
   insured,
+  insured2,
   beneficiaries = [],
   onAddBeneficiary,
   onUpdateBeneficiary,
   onRemoveBeneficiary,
   errors = {},
   showErrors = false,
-  dropdownValues = {}
+  dropdownValues = {},
+  applicationNumber,
 }) {
   const [primaryBeneficiaries, setPrimaryBeneficiaries] = useState([
-    { id: 1, beneficiaryId: '', relationship: '', allocation: 100, type: 'primary' }
+    { id: 1, beneficiaryId: '', relationship: '', allocation: 100, relatedInsured: insured, type: 'primary' }
   ]);
   
   const [contingentBeneficiaries, setContingentBeneficiaries] = useState([]);
@@ -41,6 +43,15 @@ function BeneficiarySection({
   const [currentBeneficiaryRowId, setCurrentBeneficiaryRowId] = useState(null);
   const [currentBeneficiaryType, setCurrentBeneficiaryType] = useState(null);
   const [editingBeneficiary, setEditingBeneficiary] = useState(null);
+
+  // Create array of insured options
+  const insuredOptions = [];
+  if (insured) {
+    insuredOptions.push({ value: insured, label: insured });
+  }
+  if (insured2) {
+    insuredOptions.push({ value: insured2, label: insured2 });
+  }
 
   const relationshipOptions = [
     { value: '01', label: 'Spouse' },
@@ -130,7 +141,7 @@ function BeneficiarySection({
       
       setPrimaryBeneficiaries([
         ...updatedBeneficiaries,
-        { id: newId, beneficiaryId: '', relationship: '', allocation: parseFloat(newAllocation.toFixed(2)), type: 'primary' }
+        { id: newId, beneficiaryId: '', relationship: '', allocation: parseFloat(newAllocation.toFixed(2)), relatedInsured: insured, type: 'primary' }
       ]);
     } catch (error) {
       console.error('Error adding primary beneficiary:', error);
@@ -139,7 +150,6 @@ function BeneficiarySection({
 
   const handleRemovePrimaryBeneficiary = (id) => {
     try {
-      // Don't allow removing if only one primary beneficiary
       if (primaryBeneficiaries.length <= 1) {
         return;
       }
@@ -171,7 +181,7 @@ function BeneficiarySection({
       if (contingentBeneficiaries.length === 0) {
         // Adding first contingent beneficiary
         setContingentBeneficiaries([
-          { id: 1, beneficiaryId: '', relationship: '', allocation: 100, type: 'contingent' }
+          { id: 1, beneficiaryId: '', relationship: '', allocation: 100, relatedInsured: insured, type: 'contingent' }
         ]);
       } else {
         const newId = Math.max(...contingentBeneficiaries.filter(b => b).map(b => b.id)) + 1;
@@ -185,7 +195,7 @@ function BeneficiarySection({
         
         setContingentBeneficiaries([
           ...updatedBeneficiaries,
-          { id: newId, beneficiaryId: '', relationship: '', allocation: parseFloat(newAllocation.toFixed(2)), type: 'contingent' }
+          { id: newId, beneficiaryId: '', relationship: '', allocation: parseFloat(newAllocation.toFixed(2)), relatedInsured: insured, type: 'contingent' }
         ]);
       }
     } catch (error) {
@@ -259,6 +269,24 @@ function BeneficiarySection({
     }
   };
 
+  const handleRelatedInsuredChange = (id, value, type) => {
+    try {
+      if (type === 'primary') {
+        const updatedBeneficiaries = primaryBeneficiaries.map(row => 
+          row && row.id === id ? { ...row, relatedInsured: value } : row
+        );
+        setPrimaryBeneficiaries(updatedBeneficiaries);
+      } else {
+        const updatedBeneficiaries = contingentBeneficiaries.map(row => 
+          row && row.id === id ? { ...row, relatedInsured: value } : row
+        );
+        setContingentBeneficiaries(updatedBeneficiaries);
+      }
+    } catch (error) {
+      console.error('Error changing related insured:', error);
+    }
+  };
+
   const renderCoverageInfo = () => (
     <Box sx={{ mb: 3 }}>
       <Grid container spacing={2}>
@@ -278,14 +306,35 @@ function BeneficiarySection({
             disabled
           />
         </Grid>
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            label="Insured"
-            value={insured || ''}
-            disabled
-          />
-        </Grid>
+        {insured2 ? (
+          <>
+            <Grid item xs={12} md={2}>
+              <TextField
+                fullWidth
+                label="Insured 1"
+                value={insured || ''}
+                disabled
+              />
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <TextField
+                fullWidth
+                label="Insured 2"
+                value={insured2 || ''}
+                disabled
+              />
+            </Grid>
+          </>
+        ) : (
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Insured"
+              value={insured || ''}
+              disabled
+            />
+          </Grid>
+        )}
       </Grid>
     </Box>
   );
@@ -297,7 +346,7 @@ function BeneficiarySection({
     
     return (
       <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }} key={`${type}-${row.id}`}>
-        <Grid item xs={12} md={5}>
+        <Grid item xs={12} md={4}>
           <FormControl fullWidth>
             <InputLabel>{type === 'primary' ? 'Add Beneficiary' : 'Add Contingent Beneficiary'}</InputLabel>
             <Select
@@ -305,7 +354,6 @@ function BeneficiarySection({
               onChange={() => {}}
               label={type === 'primary' ? 'Add Beneficiary' : 'Add Contingent Beneficiary'}
               renderValue={() => formatBeneficiaryInfo(selectedBeneficiary)}
-              displayEmpty
             >
               <MenuItem value="" disabled>Select</MenuItem>
               <MenuItem 
@@ -325,7 +373,23 @@ function BeneficiarySection({
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={2}>
+          <FormControl fullWidth>
+            <InputLabel>Related Insured</InputLabel>
+            <Select
+              value={row.relatedInsured || insured}
+              onChange={(e) => handleRelatedInsuredChange(row.id, e.target.value, type)}
+              label="Related Insured"
+            >
+              {insuredOptions.map(option => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={2}>
           <FormControl fullWidth>
             <InputLabel>Relationship to Insured</InputLabel>
             <Select
@@ -423,6 +487,7 @@ function BeneficiarySection({
         dropdownValues={dropdownValues}
         beneficiaries={storedBeneficiaries}
         editingBeneficiary={editingBeneficiary}
+        applicationNumber={applicationNumber}
       />
     </Paper>
   );

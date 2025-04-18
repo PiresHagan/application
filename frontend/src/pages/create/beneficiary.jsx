@@ -178,6 +178,7 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
         planName={productData.plan || ''}
         faceAmount={baseCoverage.faceAmount || '0'}
         insured={formatInsuredName(baseCoverage.insured1)}
+        insured2={baseCoverage.coverageType === 'joint' ? formatInsuredName(baseCoverage.insured2) : null}
         beneficiaries={beneficiaries}
         onAddBeneficiary={handleAddBeneficiary}
         onUpdateBeneficiary={(beneficiaryId, relationship, allocation, type) => 
@@ -187,6 +188,7 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
           handleRemoveBeneficiary(beneficiaryId, 'base', type)
         }
         dropdownValues={dropdownValues}
+        applicationNumber={applicationNumber}
       />
       
       {/* Additional Coverage Sections */}
@@ -196,7 +198,7 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
         return (
           <BeneficiarySection
             key={`additional-${coverage.id}`}
-            coverageType="Additional"
+            coverageType="Additional Coverage"
             planName={coverage.coverage || ''}
             faceAmount={coverage.faceAmount || '0'}
             insured={formatInsuredName(coverage.insured1)}
@@ -209,6 +211,7 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
               handleRemoveBeneficiary(beneficiaryId, coverage.id, type)
             }
             dropdownValues={dropdownValues}
+            applicationNumber={applicationNumber}
           />
         );
       })}
@@ -232,6 +235,7 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
               handleRemoveBeneficiary(beneficiaryId, `rider-${rider.id}`, type)
             }
             dropdownValues={dropdownValues}
+            applicationNumber={applicationNumber}
           />
         ))}
       
