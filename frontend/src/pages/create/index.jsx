@@ -25,12 +25,12 @@ function Create() {
           applicationNumber={applicationNumber}
           onStepComplete={(isComplete) => handleStepCompletion(1, isComplete)}
         />;
-      case 3:
+      case 2:
         return <Medical
           applicationNumber={applicationNumber}
           onStepComplete={(isComplete) => handleStepCompletion(2, isComplete)}
         />;
-      case 2:
+      case 3:
         return <Beneficiary
           applicationNumber={applicationNumber}
           onStepComplete={(isComplete) => handleStepCompletion(3, isComplete)}
