@@ -225,6 +225,11 @@ function Medical({ applicationNumber, onStepComplete }) {
   }, [sectionValidation, hasErrors, onStepComplete]);
 
   const handleTabChange = (event, newValue) => {
+    const currentInsuredId = insureds[activeTab]?.id;
+    if (currentInsuredId) {
+      dispatch(saveMedicalData(formData));
+    }
+    
     setActiveTab(newValue);
 
     setTimeout(() => {
@@ -406,6 +411,8 @@ function Medical({ applicationNumber, onStepComplete }) {
   };
 
   const handleNext = () => {
+    dispatch(saveMedicalData(formData));
+    
     if (activeTab < insureds.length - 1) {
       const currentInsuredId = insureds[activeTab].id;
       const isCurrentInsuredValid = validateForm(currentInsuredId);
@@ -443,12 +450,13 @@ function Medical({ applicationNumber, onStepComplete }) {
         return;
       }
 
-      dispatch(saveMedicalData(formData));
       dispatch(nextStep());
     }
   };
 
   const handleBack = () => {
+    dispatch(saveMedicalData(formData));
+    
     if (activeTab > 0) {
       setActiveTab(activeTab - 1);
     } else {
