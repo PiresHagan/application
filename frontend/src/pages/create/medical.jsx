@@ -50,6 +50,12 @@ function Medical({ applicationNumber, onStepComplete }) {
   useEffect(() => {
     if (Object.keys(medicalData).length > 0) {
       setFormData(medicalData);
+      
+      Object.keys(medicalData).forEach(insuredId => {
+        Object.keys(medicalData[insuredId]).forEach(section => {
+          updateSectionValidation(insuredId, section, medicalData[insuredId][section]);
+        });
+      });
     } else {
       const initialData = {};
       insureds.forEach(insured => {

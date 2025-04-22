@@ -45,9 +45,10 @@ public class FormService {
             JOIN frapplicationform f ON f.ApplicationFormGUID = r.ApplicationFormGUID
             WHERE f.ApplicationFormNumber = ?
             AND c.TypeCode = '01'
-            AND r.RoleCode = '01'
+            AND r.RoleCode IN ('01', '02')
             AND r.StatusCode = '01'
             """;
+            log.info("SQLsdfsdf: {}", sql);
 
         return jdbcTemplate.query(sql, 
             (rs, rowNum) -> {

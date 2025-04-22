@@ -18,8 +18,8 @@ import Riders from '../../components/coverage/Riders';
 import PremiumSection from '../../components/coverage/PremiumSection';
 import { validateSection, validateAllAdditionalCoverages, validateAllRiders } from '../../utils/coverageValidations';
 import { toast } from 'react-toastify';
-import { useGetDropdownValuesQuery, useGetFormOwnersQuery, useGetCompanyProductsQuery, useGetProductPlansQuery, useUpdateApplicationPlanMutation, useSaveBaseCoverageMutation } from '../../slices/createApiSlice';
-import { setCoverageOwners } from '../../slices/coverageOwnersSlice';
+import { useGetDropdownValuesQuery, useGetFormOwnersQuery, useGetCompanyProductsQuery, useGetProductPlansQuery, useUpdateApplicationPlanMutation, useSaveBaseCoverageMutation, useSaveInsuredMutation, useUpdateInsuredMutation } from '../../slices/createApiSlice';
+import { setCoverageOwners, updateCoverageOwner } from '../../slices/coverageOwnersSlice';
 import {
   setProductData,
   setBaseCoverageData,
@@ -34,9 +34,13 @@ function Coverage({ applicationNumber, onStepComplete }) {
   const activeStep = useSelector((state) => state.step.activeStep);
   const owners = useSelector(state => state.coverageOwners.owners);
   const { data: dropdownValues = {} } = useGetDropdownValuesQuery();
-  const { data: formOwners, isLoading } = useGetFormOwnersQuery(applicationNumber);
+  const { data: formOwners, isLoading, refetch } = useGetFormOwnersQuery(applicationNumber);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch, useSelector(state => state.coverageOwners.owners)]);
+
   const mainOwners = useSelector(state => state.owner.owners);
-  const coverageOwners = useSelector(state => state.coverageOwners.owners);
   const outdated = useSelector(state => state.premium?.outdated);
 
   const storedProductData = useSelector(state => state.coverage.product);
@@ -95,6 +99,8 @@ function Coverage({ applicationNumber, onStepComplete }) {
   );
   const [updateApplicationPlan] = useUpdateApplicationPlanMutation();
   const [saveBaseCoverage] = useSaveBaseCoverageMutation();
+  const [saveInsured] = useSaveInsuredMutation();
+  const [updateInsured] = useUpdateInsuredMutation();
 
   const [calculatePremium, { isLoading: premiumLoading }] = useCalculatePremiumMutation();
 
@@ -638,8 +644,45 @@ function Coverage({ applicationNumber, onStepComplete }) {
         }).unwrap();
       }
 
-      console.log('Saving base coverage with data:', enhancedBaseCoverageData);
+      // Step 1: First save any newly added insureds that don't have clientGUID yet
+      const newInsuredsPromises = owners
+        .filter(owner => !owner.clientGUID && owner.ownerType === '01')
+        .map(async (newInsured) => {
+          const insuredData = {
+            firstName: newInsured.firstName,
+            lastName: newInsured.lastName,
+            dateOfBirth: newInsured.dateOfBirth,
+            gender: newInsured.gender,
+            tobacco: newInsured.tobacco,
+            countryCode: newInsured.countryCode || 'US',
+            stateCode: newInsured.state,
+            ssn: newInsured.ssn,
+            applicationFormNumber: applicationNumber
+          };
+          
+          try {
+            const response = await saveInsured(insuredData).unwrap();
+            // Update the owner in the Redux store with the new clientGUID
+            dispatch(updateCoverageOwner({
+              id: newInsured.id,
+              data: {
+                clientGUID: response.clientGUID,
+                roleGUID: response.roleGUID,
+                roleCode: response.roleCode
+              }
+            }));
+            return response;
+          } catch (error) {
+            console.error('Failed to save insured:', error);
+            throw error;
+          }
+        });
 
+      if (newInsuredsPromises.length > 0) {
+        await Promise.all(newInsuredsPromises);
+      }
+
+      // Step 2: Now save the base coverage with updated insured data
       const response = await saveBaseCoverage({
         applicationNumber,
         coverageData: enhancedBaseCoverageData
