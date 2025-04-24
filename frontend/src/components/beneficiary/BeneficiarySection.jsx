@@ -121,6 +121,21 @@ function BeneficiarySection({
       if (onAddBeneficiary) {
         onAddBeneficiary(beneficiary);
       }
+
+      if (onUpdateBeneficiary) {
+        const rowData = currentBeneficiaryType === 'primary' 
+          ? primaryBeneficiaries.find(b => b.id === currentBeneficiaryRowId)
+          : contingentBeneficiaries.find(b => b.id === currentBeneficiaryRowId);
+          
+        if (rowData) {
+          onUpdateBeneficiary(
+            beneficiary.id,
+            rowData.relationship,
+            rowData.allocation,
+            currentBeneficiaryType
+          );
+        }
+      }
     } catch (error) {
       console.error('Error saving beneficiary:', error);
     }
