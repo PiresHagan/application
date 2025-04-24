@@ -16,14 +16,109 @@ import {
   Select,
   FormControl,
   InputLabel,
-  FormHelperText
+  FormHelperText,
+  CircularProgress
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import CollapsibleSection from '../../components/common/CollapsibleSection';
 import TabPanel from '../../components/common/TabPanel';
 import { nextStep, previousStep } from '../../slices/stepSlice';
 import { saveMedicalData } from '../../slices/medicalSlice';
+import { useSaveMedicalDataMutation } from '../../slices/createApiSlice';
 import { toast } from 'react-toastify';
+
+const questionMapping = {
+  'heightWeight_suddenWeightChange': 'Have you experienced sudden weight gain or loss in the past 12 months?',
+
+  'tobaccoSubstance_usesTobacco': 'Do you smoke cigarettes, cigars, e-cigarettes, or chew tobacco?',
+  'tobaccoSubstance_packsPerDay': 'Packs per day',
+  'tobaccoSubstance_yearsSmoked': 'Years smoked',
+  'tobaccoSubstance_hasQuit': 'Have you quit smoking?',
+  'tobaccoSubstance_yearsQuit': 'How long ago? (years)',
+  'tobaccoSubstance_usesRecreationalDrugs': 'Do you use recreational drugs (marijuana, cocaine, opioids, etc.)?',
+  'tobaccoSubstance_substanceAbuseTreatment': 'Have you ever been treated for substance abuse?',
+
+  'chronicConditions_heartDisease': 'Heart disease',
+  'chronicConditions_highBloodPressure': 'High blood pressure',
+  'chronicConditions_highCholesterol': 'High cholesterol',
+  'chronicConditions_stroke': 'Stroke',
+  'chronicConditions_diabetes': 'Diabetes (Type 1 or Type 2)',
+  'chronicConditions_cancer': 'Cancer',
+  'chronicConditions_cancerDetails': 'Cancer type and stage',
+  'chronicConditions_kidneyDisease': 'Kidney disease',
+  'chronicConditions_liverDisease': 'Liver disease',
+  'chronicConditions_lungDisease': 'Lung disease (e.g., asthma, COPD)',
+  'chronicConditions_neurologicalDisorders': 'Neurological disorders',
+  'chronicConditions_noneOfTheAbove': 'None of the above chronic conditions',
+
+  'recentMedical_recentSurgery': 'Have you had surgery in the past 5 years?',
+  'recentMedical_recentHospitalization': 'Have you been hospitalized in the past 2 years?',
+  'recentMedical_currentTreatment': 'Are you currently under medical treatment for any condition?',
+  'recentMedical_currentTreatmentDetails': 'Details of current treatment',
+
+  'medications_takesMedications': 'Are you currently taking any prescription medications?',
+  'medications_medicationDetails': 'List medications, dosages, and purpose',
+
+  'mentalHealth_mentalHealthDiagnosis': 'Have you ever been diagnosed with depression, anxiety, bipolar disorder, or schizophrenia?',
+  'mentalHealth_mentalHealthHospitalization': 'Have you ever been hospitalized for mental health treatment?',
+  'mentalHealth_mentalHealthMedications': 'Are you currently taking medication for mental health conditions?',
+
+  'familyHistory_familyCancer': 'Family history of cancer',
+  'familyHistory_familyHeartDisease': 'Family history of heart disease',
+  'familyHistory_familyDiabetes': 'Family history of diabetes',
+  'familyHistory_familyStroke': 'Family history of stroke',
+  'familyHistory_familyHighBloodPressure': 'Family history of high blood pressure',
+  'familyHistory_noneOfTheAbove': 'No family history of these conditions',
+
+  'hivStd_hivPositive': 'Have you ever tested positive for HIV/AIDS?',
+  'hivStd_stdDiagnosis': 'Have you been diagnosed with any other sexually transmitted diseases?',
+
+  'sleepDisorders_sleepApnea': 'Do you suffer from sleep apnea or require a CPAP machine?',
+
+  'otherConditions_hasOtherConditions': 'Do you have any medical conditions not listed above that require treatment?',
+  'otherConditions_otherConditionsDetails': 'Please describe other medical conditions',
+
+  'highRiskActivities_skydiving': 'Skydiving',
+  'highRiskActivities_scubaDiving': 'Scuba Diving',
+  'highRiskActivities_rockClimbing': 'Rock Climbing',
+  'highRiskActivities_baseJumping': 'Base Jumping',
+  'highRiskActivities_hangGliding': 'Hang Gliding',
+  'highRiskActivities_bungeeJumping': 'Bungee Jumping',
+  'highRiskActivities_motorsports': 'Motorsports (racing)',
+  'highRiskActivities_extremeHiking': 'Extreme Hiking',
+  'highRiskActivities_whitewaterRafting': 'Whitewater Rafting',
+  'highRiskActivities_bigGameHunting': 'Big Game Hunting',
+  'highRiskActivities_bullRiding': 'Bull Riding',
+  'highRiskActivities_professionalSports': 'Professional Sports',
+  'highRiskActivities_noneOfTheAbove': 'No participation in high-risk activities',
+
+  'hazardousTravel_frequentTravel': 'Do you frequently travel outside the country?',
+  'hazardousTravel_travelWarningCountries': 'Have you traveled to any countries under a State Department Travel Warning in the past year?',
+  'hazardousTravel_warZones': 'Do you work/live in war zones or high-risk areas?',
+
+  'pilotLicense_hasPilotLicense': 'Do you hold a private or commercial pilot\'s license?',
+  'pilotLicense_flyingHours': 'How many hours do you fly per year?',
+  'pilotLicense_fliesUltralight': 'Do you fly ultralight or experimental aircraft?',
+
+  'alcohol_alcoholConsumption': 'How many drinks per week do you consume on average?',
+
+  'dui_hasDUI': 'Have you ever been convicted of a DUI or reckless driving?',
+  'dui_duiDetails': 'How many times and when?',
+
+  // Military
+  'military_militaryService': 'Are you currently serving in the military or law enforcement?',
+  'military_highRiskUnit': 'Are you in a high-risk unit (SWAT, bomb squad, special forces)?',
+
+  // Occupation Risks
+  'occupationRisks_highRiskJob': 'Does your job involve high-risk duties?',
+  'occupationRisks_firefighter': 'Firefighter',
+  'occupationRisks_policeOfficer': 'Police Officer',
+  'occupationRisks_militaryCombat': 'Military Combat Role',
+  'occupationRisks_oilRigWorker': 'Offshore Oil Rig Worker',
+  'occupationRisks_deepSeaFisherman': 'Deep-Sea Fisherman',
+  'occupationRisks_stuntPerformer': 'Stunt Performer',
+  'occupationRisks_explosivesWorker': 'Explosives/Demolition Worker'
+};
 
 function a11yProps(index) {
   return {
@@ -47,10 +142,12 @@ function Medical({ applicationNumber, onStepComplete }) {
   const [sectionValidation, setSectionValidation] = useState({});
   const [hasErrors, setHasErrors] = useState(false);
 
+  const [saveMedicalDataToAPI, { isLoading: isSaving }] = useSaveMedicalDataMutation();
+
   useEffect(() => {
     if (Object.keys(medicalData).length > 0) {
       setFormData(medicalData);
-      
+
       Object.keys(medicalData).forEach(insuredId => {
         Object.keys(medicalData[insuredId]).forEach(section => {
           updateSectionValidation(insuredId, section, medicalData[insuredId][section]);
@@ -235,7 +332,7 @@ function Medical({ applicationNumber, onStepComplete }) {
     if (currentInsuredId) {
       dispatch(saveMedicalData(formData));
     }
-    
+
     setActiveTab(newValue);
 
     setTimeout(() => {
@@ -416,9 +513,57 @@ function Medical({ applicationNumber, onStepComplete }) {
     }));
   };
 
-  const handleNext = () => {
+  const transformSectionData = (sectionData, sectionName) => {
+    // Transform the section data to use actual questions as field names
+    const transformedData = {};
+
+    Object.entries(sectionData).forEach(([field, value]) => {
+      const fieldKey = `${sectionName}_${field}`;
+      const questionText = questionMapping[fieldKey] || fieldKey; // Fallback to the field key if no mapping exists
+
+      transformedData[questionText] = value;
+    });
+
+    return transformedData;
+  };
+
+  const saveInsuredMedicalData = async (insuredId) => {
+    try {
+      const insuredData = formData[insuredId];
+      if (!insuredData) return true;
+
+      // Get the roleGUID from the insured
+      const insured = insureds.find(ins => ins.id == insuredId);
+      if (!insured || !insured.roleGUID) {
+        console.error(`No roleGUID found for insured ${insuredId}`);
+        return false;
+      }
+
+      // Transform and flatten the data for API
+      const apiData = {};
+
+      for (const [section, sectionData] of Object.entries(insuredData)) {
+        const transformedSection = transformSectionData(sectionData, section);
+        Object.assign(apiData, transformedSection);
+      }
+
+      // Send to API
+      await saveMedicalDataToAPI({
+        roleGUID: insured.roleGUID,
+        medicalData: apiData
+      }).unwrap();
+
+      return true;
+    } catch (error) {
+      console.error('Error saving medical data:', error);
+      toast.error(`Failed to save medical data: ${error.message || 'Unknown error'}`);
+      return false;
+    }
+  };
+
+  const handleNext = async () => {
     dispatch(saveMedicalData(formData));
-    
+
     if (activeTab < insureds.length - 1) {
       const currentInsuredId = insureds[activeTab].id;
       const isCurrentInsuredValid = validateForm(currentInsuredId);
@@ -436,6 +581,10 @@ function Medical({ applicationNumber, onStepComplete }) {
         toast.error('Please complete all required fields before proceeding');
         return;
       }
+
+      // Save current insured data to database
+      const saveSuccess = await saveInsuredMedicalData(currentInsuredId);
+      if (!saveSuccess) return;
 
       setActiveTab(activeTab + 1);
     } else {
@@ -456,13 +605,24 @@ function Medical({ applicationNumber, onStepComplete }) {
         return;
       }
 
+      const currentInsuredId = insureds[activeTab].id;
+      const saveSuccess = await saveInsuredMedicalData(currentInsuredId);
+      if (!saveSuccess) return;
+
+      for (const insured of insureds) {
+        if (insured.id !== currentInsuredId) {
+          const otherSaveSuccess = await saveInsuredMedicalData(insured.id);
+          if (!otherSaveSuccess) return;
+        }
+      }
+
       dispatch(nextStep());
     }
   };
 
   const handleBack = () => {
     dispatch(saveMedicalData(formData));
-    
+
     if (activeTab > 0) {
       setActiveTab(activeTab - 1);
     } else {
@@ -530,7 +690,7 @@ function Medical({ applicationNumber, onStepComplete }) {
         </Grid> */}
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Have you experienced sudden weight gain or loss in the past 12 months?
+            {questionMapping['heightWeight_suddenWeightChange']}
           </Typography>
           <RadioGroup
             row
@@ -557,7 +717,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Do you smoke cigarettes, cigars, e-cigarettes, or chew tobacco?
+        {questionMapping['tobaccoSubstance_usesTobacco']}
       </Typography>
       <RadioGroup
         row
@@ -574,7 +734,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <TextField
-                label="Packs per day"
+                label={questionMapping['tobaccoSubstance_packsPerDay']}
                 fullWidth
                 value={formData[insuredId]?.tobaccoSubstance?.packsPerDay || ''}
                 onChange={(e) => handleFieldChange(insuredId, 'tobaccoSubstance', 'packsPerDay', e.target.value)}
@@ -583,7 +743,7 @@ function Medical({ applicationNumber, onStepComplete }) {
             </Grid>
             <Grid item xs={6}>
               <TextField
-                label="Years smoked"
+                label={questionMapping['tobaccoSubstance_yearsSmoked']}
                 fullWidth
                 type="number"
                 value={formData[insuredId]?.tobaccoSubstance?.yearsSmoked || ''}
@@ -594,7 +754,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           </Grid>
 
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-            Have you quit smoking?
+            {questionMapping['tobaccoSubstance_hasQuit']}
           </Typography>
           <RadioGroup
             row
@@ -608,7 +768,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
           {formData[insuredId]?.tobaccoSubstance?.hasQuit === 'Y' && (
             <TextField
-              label="How long ago? (years)"
+              label={questionMapping['tobaccoSubstance_yearsQuit']}
               fullWidth
               type="number"
               value={formData[insuredId]?.tobaccoSubstance?.yearsQuit || ''}
@@ -620,7 +780,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       )}
 
       <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-        Do you use recreational drugs (marijuana, cocaine, opioids, etc.)?
+        {questionMapping['tobaccoSubstance_usesRecreationalDrugs']}
       </Typography>
       <RadioGroup
         row
@@ -633,7 +793,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       </RadioGroup>
 
       <Typography variant="subtitle1" gutterBottom>
-        Have you ever been treated for substance abuse?
+        {questionMapping['tobaccoSubstance_substanceAbuseTreatment']}
       </Typography>
       <RadioGroup
         row
@@ -670,7 +830,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="Heart disease"
+            label={questionMapping['chronicConditions_heartDisease']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -682,7 +842,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="High blood pressure"
+            label={questionMapping['chronicConditions_highBloodPressure']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -694,7 +854,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="High cholesterol"
+            label={questionMapping['chronicConditions_highCholesterol']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -706,7 +866,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="Stroke"
+            label={questionMapping['chronicConditions_stroke']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -718,7 +878,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="Diabetes (Type 1 or Type 2)"
+            label={questionMapping['chronicConditions_diabetes']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -730,13 +890,13 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="Cancer"
+            label={questionMapping['chronicConditions_cancer']}
           />
         </Grid>
         {formData[insuredId]?.chronicConditions?.cancer && (
           <Grid item xs={12}>
             <TextField
-              label="Cancer type and stage"
+              label={questionMapping['chronicConditions_cancerDetails']}
               fullWidth
               value={formData[insuredId]?.chronicConditions?.cancerDetails || ''}
               onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'cancerDetails', e.target.value)}
@@ -754,7 +914,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="Kidney disease"
+            label={questionMapping['chronicConditions_kidneyDisease']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -766,7 +926,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="Liver disease"
+            label={questionMapping['chronicConditions_liverDisease']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -778,7 +938,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="Lung disease (e.g., asthma, COPD)"
+            label={questionMapping['chronicConditions_lungDisease']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -790,7 +950,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.chronicConditions?.noneOfTheAbove || false}
               />
             }
-            label="Neurological disorders"
+            label={questionMapping['chronicConditions_neurologicalDisorders']}
           />
         </Grid>
         <Grid item xs={12} sx={{ borderTop: '1px solid #e0e0e0', mt: 2, pt: 2 }}>
@@ -801,7 +961,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 onChange={(e) => handleFieldChange(insuredId, 'chronicConditions', 'noneOfTheAbove', e.target.checked)}
               />
             }
-            label="None of the above"
+            label={questionMapping['chronicConditions_noneOfTheAbove']}
           />
         </Grid>
       </Grid>
@@ -822,7 +982,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Have you had surgery in the past 5 years?
+            {questionMapping['recentMedical_recentSurgery']}
           </Typography>
           <RadioGroup
             row
@@ -837,7 +997,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Have you been hospitalized in the past 2 years?
+            {questionMapping['recentMedical_recentHospitalization']}
           </Typography>
           <RadioGroup
             row
@@ -852,7 +1012,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Are you currently under medical treatment for any condition?
+            {questionMapping['recentMedical_currentTreatment']}
           </Typography>
           <RadioGroup
             row
@@ -894,7 +1054,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Are you currently taking any prescription medications?
+        {questionMapping['medications_takesMedications']}
       </Typography>
       <RadioGroup
         row
@@ -908,7 +1068,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
       {formData[insuredId]?.medications?.takesMedications === 'Y' && (
         <TextField
-          label="List medications, dosages, and purpose"
+          label={questionMapping['medications_medicationDetails']}
           fullWidth
           multiline
           rows={4}
@@ -935,7 +1095,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Have you ever been diagnosed with depression, anxiety, bipolar disorder, or schizophrenia?
+            {questionMapping['mentalHealth_mentalHealthDiagnosis']}
           </Typography>
           <RadioGroup
             row
@@ -950,7 +1110,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Have you ever been hospitalized for mental health treatment?
+            {questionMapping['mentalHealth_mentalHealthHospitalization']}
           </Typography>
           <RadioGroup
             row
@@ -965,7 +1125,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Are you currently taking medication for mental health conditions?
+            {questionMapping['mentalHealth_mentalHealthMedications']}
           </Typography>
           <RadioGroup
             row
@@ -992,7 +1152,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Has a parent or sibling been diagnosed with any of the following before age 60?
+        {questionMapping['familyHistory_noneOfTheAbove']}
       </Typography>
       <Grid container spacing={2}>
         <Grid item xs={6}>
@@ -1004,7 +1164,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
-            label="Cancer"
+            label={questionMapping['familyHistory_familyCancer']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1016,7 +1176,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
-            label="Heart disease"
+            label={questionMapping['familyHistory_familyHeartDisease']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1028,7 +1188,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
-            label="Diabetes"
+            label={questionMapping['familyHistory_familyDiabetes']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1040,7 +1200,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
-            label="Stroke"
+            label={questionMapping['familyHistory_familyStroke']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1052,7 +1212,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.familyHistory?.noneOfTheAbove || false}
               />
             }
-            label="High blood pressure"
+            label={questionMapping['familyHistory_familyHighBloodPressure']}
           />
         </Grid>
         <Grid item xs={12} sx={{ borderTop: '1px solid #e0e0e0', mt: 2, pt: 2 }}>
@@ -1063,7 +1223,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 onChange={(e) => handleFieldChange(insuredId, 'familyHistory', 'noneOfTheAbove', e.target.checked)}
               />
             }
-            label="None of the above"
+            label={questionMapping['familyHistory_noneOfTheAbove']}
           />
         </Grid>
       </Grid>
@@ -1084,7 +1244,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Have you ever tested positive for HIV/AIDS?
+            {questionMapping['hivStd_hivPositive']}
           </Typography>
           <RadioGroup
             row
@@ -1099,7 +1259,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Have you been diagnosed with any other sexually transmitted diseases?
+            {questionMapping['hivStd_stdDiagnosis']}
           </Typography>
           <RadioGroup
             row
@@ -1126,7 +1286,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Do you suffer from sleep apnea or require a CPAP machine?
+        {questionMapping['sleepDisorders_sleepApnea']}
       </Typography>
       <RadioGroup
         row
@@ -1151,7 +1311,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Do you have any medical conditions not listed above that require treatment?
+        {questionMapping['otherConditions_hasOtherConditions']}
       </Typography>
       <RadioGroup
         row
@@ -1165,7 +1325,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
       {formData[insuredId]?.otherConditions?.hasOtherConditions === 'Y' && (
         <TextField
-          label="Please describe"
+          label={questionMapping['otherConditions_otherConditionsDetails']}
           fullWidth
           multiline
           rows={3}
@@ -1189,7 +1349,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Do you participate in any of the following high-risk activities?
+        {questionMapping['highRiskActivities_noneOfTheAbove']}
       </Typography>
       <Grid container spacing={2}>
         <Grid item xs={6}>
@@ -1201,7 +1361,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Skydiving"
+            label={questionMapping['highRiskActivities_skydiving']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1213,7 +1373,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Scuba Diving"
+            label={questionMapping['highRiskActivities_scubaDiving']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1225,7 +1385,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Rock Climbing"
+            label={questionMapping['highRiskActivities_rockClimbing']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1237,7 +1397,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Base Jumping"
+            label={questionMapping['highRiskActivities_baseJumping']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1249,7 +1409,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Hang Gliding"
+            label={questionMapping['highRiskActivities_hangGliding']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1261,7 +1421,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Bungee Jumping"
+            label={questionMapping['highRiskActivities_bungeeJumping']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1273,7 +1433,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Motorsports (racing)"
+            label={questionMapping['highRiskActivities_motorsports']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1285,7 +1445,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Extreme Hiking"
+            label={questionMapping['highRiskActivities_extremeHiking']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1297,7 +1457,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Whitewater Rafting"
+            label={questionMapping['highRiskActivities_whitewaterRafting']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1309,7 +1469,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Big Game Hunting"
+            label={questionMapping['highRiskActivities_bigGameHunting']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1321,7 +1481,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Bull Riding"
+            label={questionMapping['highRiskActivities_bullRiding']}
           />
         </Grid>
         <Grid item xs={6}>
@@ -1333,7 +1493,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 disabled={formData[insuredId]?.highRiskActivities?.noneOfTheAbove || false}
               />
             }
-            label="Professional Sports"
+            label={questionMapping['highRiskActivities_professionalSports']}
           />
         </Grid>
         <Grid item xs={12} sx={{ borderTop: '1px solid #e0e0e0', mt: 2, pt: 2 }}>
@@ -1344,7 +1504,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                 onChange={(e) => handleFieldChange(insuredId, 'highRiskActivities', 'noneOfTheAbove', e.target.checked)}
               />
             }
-            label="None of the above"
+            label={questionMapping['highRiskActivities_noneOfTheAbove']}
           />
         </Grid>
       </Grid>
@@ -1365,7 +1525,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Do you frequently travel outside the country?
+            {questionMapping['hazardousTravel_frequentTravel']}
           </Typography>
           <RadioGroup
             row
@@ -1380,7 +1540,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Have you traveled to any countries under a State Department Travel Warning in the past year?
+            {questionMapping['hazardousTravel_travelWarningCountries']}
           </Typography>
           <RadioGroup
             row
@@ -1395,7 +1555,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Do you work/live in war zones or high-risk areas?
+            {questionMapping['hazardousTravel_warZones']}
           </Typography>
           <RadioGroup
             row
@@ -1424,7 +1584,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       <Grid container spacing={2}>
         <Grid item xs={6}>
           <Typography variant="subtitle1" gutterBottom>
-            Do you hold a private or commercial pilot's license?
+            {questionMapping['pilotLicense_hasPilotLicense']}
           </Typography>
           <RadioGroup
             row
@@ -1441,7 +1601,7 @@ function Medical({ applicationNumber, onStepComplete }) {
           <>
             <Grid item xs={6}>
               <TextField
-                label="How many hours do you fly per year?"
+                label={questionMapping['pilotLicense_flyingHours']}
                 fullWidth
                 type="number"
                 value={formData[insuredId]?.pilotLicense?.flyingHours || '0'}
@@ -1451,7 +1611,7 @@ function Medical({ applicationNumber, onStepComplete }) {
             </Grid>
             <Grid item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
-                Do you fly ultralight or experimental aircraft?
+                {questionMapping['pilotLicense_fliesUltralight']}
               </Typography>
               <RadioGroup
                 row
@@ -1481,7 +1641,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        How many drinks per week do you consume on average?
+        {questionMapping['alcohol_alcoholConsumption']}
       </Typography>
       <RadioGroup
         value={formData[insuredId]?.alcohol?.alcoholConsumption || ''}
@@ -1507,7 +1667,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Have you ever been convicted of a DUI or reckless driving?
+        {questionMapping['dui_hasDUI']}
       </Typography>
       <RadioGroup
         row
@@ -1521,7 +1681,7 @@ function Medical({ applicationNumber, onStepComplete }) {
 
       {formData[insuredId]?.dui?.hasDUI === 'Y' && (
         <TextField
-          label="How many times and when?"
+          label={questionMapping['dui_duiDetails']}
           fullWidth
           value={formData[insuredId]?.dui?.duiDetails || ''}
           onChange={(e) => handleFieldChange(insuredId, 'dui', 'duiDetails', e.target.value)}
@@ -1544,7 +1704,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Are you currently serving in the military or law enforcement?
+        {questionMapping['military_militaryService']}
       </Typography>
       <RadioGroup
         row
@@ -1559,7 +1719,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       {formData[insuredId]?.military?.militaryService === 'Y' && (
         <>
           <Typography variant="subtitle1" gutterBottom>
-            Are you in a high-risk unit (SWAT, bomb squad, special forces)?
+            {questionMapping['military_highRiskUnit']}
           </Typography>
           <RadioGroup
             row
@@ -1586,7 +1746,7 @@ function Medical({ applicationNumber, onStepComplete }) {
       expandedSections={expandedSections}
     >
       <Typography variant="subtitle1" gutterBottom>
-        Does your job involve high-risk duties?
+        {questionMapping['occupationRisks_highRiskJob']}
       </Typography>
       <RadioGroup
         row
@@ -1612,7 +1772,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                     onChange={(e) => handleFieldChange(insuredId, 'occupationRisks', 'firefighter', e.target.checked)}
                   />
                 }
-                label="Firefighter"
+                label={questionMapping['occupationRisks_firefighter']}
               />
             </Grid>
             <Grid item xs={6}>
@@ -1623,7 +1783,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                     onChange={(e) => handleFieldChange(insuredId, 'occupationRisks', 'policeOfficer', e.target.checked)}
                   />
                 }
-                label="Police Officer"
+                label={questionMapping['occupationRisks_policeOfficer']}
               />
             </Grid>
             <Grid item xs={6}>
@@ -1634,7 +1794,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                     onChange={(e) => handleFieldChange(insuredId, 'occupationRisks', 'militaryCombat', e.target.checked)}
                   />
                 }
-                label="Military Combat Role"
+                label={questionMapping['occupationRisks_militaryCombat']}
               />
             </Grid>
             <Grid item xs={6}>
@@ -1645,7 +1805,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                     onChange={(e) => handleFieldChange(insuredId, 'occupationRisks', 'oilRigWorker', e.target.checked)}
                   />
                 }
-                label="Offshore Oil Rig Worker"
+                label={questionMapping['occupationRisks_oilRigWorker']}
               />
             </Grid>
             <Grid item xs={6}>
@@ -1656,7 +1816,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                     onChange={(e) => handleFieldChange(insuredId, 'occupationRisks', 'deepSeaFisherman', e.target.checked)}
                   />
                 }
-                label="Deep-Sea Fisherman"
+                label={questionMapping['occupationRisks_deepSeaFisherman']}
               />
             </Grid>
             <Grid item xs={6}>
@@ -1667,7 +1827,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                     onChange={(e) => handleFieldChange(insuredId, 'occupationRisks', 'stuntPerformer', e.target.checked)}
                   />
                 }
-                label="Stunt Performer"
+                label={questionMapping['occupationRisks_stuntPerformer']}
               />
             </Grid>
             <Grid item xs={6}>
@@ -1678,7 +1838,7 @@ function Medical({ applicationNumber, onStepComplete }) {
                     onChange={(e) => handleFieldChange(insuredId, 'occupationRisks', 'explosivesWorker', e.target.checked)}
                   />
                 }
-                label="Explosives/Demolition Worker"
+                label={questionMapping['occupationRisks_explosivesWorker']}
               />
             </Grid>
           </Grid>
@@ -1738,15 +1898,23 @@ function Medical({ applicationNumber, onStepComplete }) {
                 {renderOccupationRisksSection(insured.id)}
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-                  <Button onClick={handleBack} variant="outlined">
+                  <Button onClick={handleBack} variant="outlined" disabled={isSaving}>
                     {activeTab > 0 ? 'Previous Insured' : 'Back'}
                   </Button>
                   <Button
                     onClick={handleNext}
                     variant="contained"
                     color="primary"
+                    disabled={isSaving}
                   >
-                    {activeTab < insureds.length - 1 ? 'Next Insured' : 'Next Step'}
+                    {isSaving ? (
+                      <>
+                        <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                        Saving...
+                      </>
+                    ) : (
+                      activeTab < insureds.length - 1 ? 'Next Insured' : 'Next Step'
+                    )}
                   </Button>
                 </Box>
               </Box>

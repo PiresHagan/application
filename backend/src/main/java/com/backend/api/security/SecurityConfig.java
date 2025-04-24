@@ -41,6 +41,7 @@ public class SecurityConfig {
         "/api/coverage/premium/calculate",
         "/api/coverage/premium/refresh",
         "/api/coverage/additional-definitions/{planGUID}",
+        "/api/medical/save/{applicationNumber}"
     };
 
     @Bean

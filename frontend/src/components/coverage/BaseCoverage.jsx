@@ -211,7 +211,7 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
             label="Same as Owner"
           />
         </Box>
-        {!isOwnerSelected(data.insured1) && data.insured1 && (
+        {/* {!isOwnerSelected(data.insured1) && data.insured1 && (
           <FormControl fullWidth>
             <InputLabel>Relationship to Owner</InputLabel>
             <Select
@@ -226,7 +226,7 @@ function BaseCoverage({ data, onChange, errors = {}, showErrors = false, owners 
               ))}
             </Select>
           </FormControl>
-        )}
+        )} */}
       </Box>
 
       {/* Insured 2 Section */}
