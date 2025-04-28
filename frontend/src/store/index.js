@@ -10,6 +10,7 @@ import coverageReducer from '../slices/coverageSlice';
 import medicalReducer from '../slices/medicalSlice';
 import premiumReducer from '../slices/premiumSlice';
 import beneficiaryReducer from '../slices/beneficiarySlice';
+import paymentReducer from '../slices/paymentSlice';
 
 const persistConfig = {
   key: 'root',
@@ -31,6 +32,7 @@ const store = configureStore({
     medical: medicalReducer,
     premium: premiumReducer,
     beneficiary: beneficiaryReducer,
+    payment: paymentReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
