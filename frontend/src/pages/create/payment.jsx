@@ -194,7 +194,7 @@ function Payment({ applicationNumber, onStepComplete }) {
                 <RadioGroup
                     value={paymentData.paymentMode}
                     onChange={(e) => handlePaymentDataChange('paymentMode', e.target.value)}
-                    sx={{ mb: 3 }}
+                    sx={{ mb: 3, maxWidth: '50%' }}
                 >
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={3}>
@@ -218,8 +218,6 @@ function Payment({ applicationNumber, onStepComplete }) {
                     applicationNumber={applicationNumber}
                     paymentMode={paymentData.paymentMode}
                 />
-
-                <Divider sx={{ my: 3 }} />
 
                 <PaymentMethodSection
                     value={paymentData.paymentMethod}

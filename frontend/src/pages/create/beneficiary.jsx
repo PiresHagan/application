@@ -41,18 +41,18 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
   // Format insured name for display
   const formatInsuredName = (insuredId) => {
     if (!insuredId) return 'Unknown';
-    
+
     const insured = coverageOwners.find(owner => owner && owner.id == insuredId);
     if (!insured) return 'Unknown';
-    
+
     return `${insured.firstName || ''} ${insured.lastName || ''}`;
   };
 
   // Check if a coverage has the Accidental Death Benefit rider
   const hasADBRider = (coverageId) => {
-    return riders.some(rider => 
-      rider && rider.type && 
-      rider.type.toLowerCase().includes('accidental') && 
+    return riders.some(rider =>
+      rider && rider.type &&
+      rider.type.toLowerCase().includes('accidental') &&
       rider.selectedPerson === coverageId
     );
   };
@@ -62,7 +62,7 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
       // Validate base coverage beneficiaries
       const baseBeneficiaries = coverageBeneficiaries['base']?.primary || [];
       const baseValid = baseBeneficiaries.length > 0;
-      
+
       // Validate additional coverages
       const additionalValid = {};
       if (Array.isArray(additionalCoverages)) {
@@ -73,7 +73,7 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
           }
         });
       }
-      
+
       // Validate riders
       const ridersValid = {};
       if (Array.isArray(riders)) {
@@ -88,19 +88,18 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
           }
         });
       }
-      
+
       setValidationStatus({
         base: baseValid,
         additional: additionalValid,
         riders: ridersValid
       });
-      
-      // Check if all sections are valid for complete status
-      const isAllValid = 
+
+      const isAllValid =
         baseValid &&
         Object.values(additionalValid).every(valid => valid) &&
         Object.values(ridersValid).every(valid => valid);
-      
+
       if (onStepComplete) {
         onStepComplete(isAllValid);
       }
@@ -113,13 +112,14 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
     dispatch(addBeneficiary(beneficiary));
   };
 
-  const handleUpdateBeneficiary = (coverageId, beneficiaryId, relationship, allocation, type) => {
+  const handleUpdateBeneficiary = (coverageId, beneficiaryId, relationship, allocation, type, relatedInsured) => {
     dispatch(associateBeneficiaryWithCoverage({
       coverageId,
       beneficiaryId,
       relationship,
       allocation,
-      type
+      type,
+      relatedInsured
     }));
   };
 
@@ -134,35 +134,35 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
   const handleSaveAndContinue = () => {
     // Validate that at least one beneficiary exists for each coverage
     const baseHasBeneficiary = coverageBeneficiaries['base']?.primary?.length > 0;
-    
-    const additionalHaveBeneficiaries = Array.isArray(additionalCoverages) && 
-      additionalCoverages.every(coverage => 
-        coverage && coverage.id && 
+
+    const additionalHaveBeneficiaries = Array.isArray(additionalCoverages) &&
+      additionalCoverages.every(coverage =>
+        coverage && coverage.id &&
         coverageBeneficiaries[coverage.id]?.primary?.length > 0
       );
-    
-    const ridersHaveBeneficiaries = Array.isArray(riders) && 
-      riders.every(rider => 
-        !rider || !rider.type || 
-        !rider.type.toLowerCase().includes('accidental') || 
+
+    const ridersHaveBeneficiaries = Array.isArray(riders) &&
+      riders.every(rider =>
+        !rider || !rider.type ||
+        !rider.type.toLowerCase().includes('accidental') ||
         coverageBeneficiaries[`rider-${rider.id}`]?.primary?.length > 0
       );
-    
+
     if (!baseHasBeneficiary) {
       toast.error('Please add at least one beneficiary for the base coverage');
       return;
     }
-    
+
     if (!additionalHaveBeneficiaries) {
       toast.error('Please add at least one beneficiary for each additional coverage');
       return;
     }
-    
+
     if (!ridersHaveBeneficiaries) {
       toast.error('Please add at least one beneficiary for each Accidental Death Benefit rider');
       return;
     }
-    
+
     dispatch(nextStep());
   };
 
@@ -171,7 +171,7 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
       <Typography variant="h5" sx={{ mb: 3 }}>
         Beneficiary Designations
       </Typography>
-      
+
       {/* Base Coverage Section */}
       <BeneficiarySection
         coverageType="Base"
@@ -181,20 +181,22 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
         insured2={baseCoverage.coverageType === 'joint' ? formatInsuredName(baseCoverage.insured2) : null}
         beneficiaries={beneficiaries}
         onAddBeneficiary={handleAddBeneficiary}
-        onUpdateBeneficiary={(beneficiaryId, relationship, allocation, type) => 
+        onUpdateBeneficiary={(beneficiaryId, relationship, allocation, type) =>
           handleUpdateBeneficiary('base', beneficiaryId, relationship, allocation, type)
         }
-        onRemoveBeneficiary={(beneficiaryId, type) => 
+        onRemoveBeneficiary={(beneficiaryId, type) =>
           handleRemoveBeneficiary(beneficiaryId, 'base', type)
         }
         dropdownValues={dropdownValues}
         applicationNumber={applicationNumber}
+        coverageId="base"
+        coverageBeneficiaries={coverageBeneficiaries}
       />
-      
+
       {/* Additional Coverage Sections */}
       {Array.isArray(additionalCoverages) && additionalCoverages.map(coverage => {
         if (!coverage || !coverage.id) return null;
-        
+
         return (
           <BeneficiarySection
             key={`additional-${coverage.id}`}
@@ -204,18 +206,20 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
             insured={formatInsuredName(coverage.insured1)}
             beneficiaries={beneficiaries}
             onAddBeneficiary={handleAddBeneficiary}
-            onUpdateBeneficiary={(beneficiaryId, relationship, allocation, type) => 
+            onUpdateBeneficiary={(beneficiaryId, relationship, allocation, type) =>
               handleUpdateBeneficiary(coverage.id, beneficiaryId, relationship, allocation, type)
             }
-            onRemoveBeneficiary={(beneficiaryId, type) => 
+            onRemoveBeneficiary={(beneficiaryId, type) =>
               handleRemoveBeneficiary(beneficiaryId, coverage.id, type)
             }
             dropdownValues={dropdownValues}
             applicationNumber={applicationNumber}
+            coverageId={coverage.id}
+            coverageBeneficiaries={coverageBeneficiaries}
           />
         );
       })}
-      
+
       {/* Rider Sections only for Accidental Death Benefit */}
       {Array.isArray(riders) && riders
         .filter(rider => rider && rider.id && rider.type && rider.type.toLowerCase().includes('accidental'))
@@ -228,17 +232,19 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
             insured={formatInsuredName(rider.selectedPerson)}
             beneficiaries={beneficiaries}
             onAddBeneficiary={handleAddBeneficiary}
-            onUpdateBeneficiary={(beneficiaryId, relationship, allocation, type) => 
+            onUpdateBeneficiary={(beneficiaryId, relationship, allocation, type) =>
               handleUpdateBeneficiary(`rider-${rider.id}`, beneficiaryId, relationship, allocation, type)
             }
-            onRemoveBeneficiary={(beneficiaryId, type) => 
+            onRemoveBeneficiary={(beneficiaryId, type) =>
               handleRemoveBeneficiary(beneficiaryId, `rider-${rider.id}`, type)
             }
             dropdownValues={dropdownValues}
             applicationNumber={applicationNumber}
+            coverageId={`rider-${rider.id}`}
+            coverageBeneficiaries={coverageBeneficiaries}
           />
         ))}
-      
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
         <Button
           variant="contained"

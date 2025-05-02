@@ -31,18 +31,57 @@ function BeneficiarySection({
   showErrors = false,
   dropdownValues = {},
   applicationNumber,
+  coverageId,
+  coverageBeneficiaries = {},
 }) {
   const [primaryBeneficiaries, setPrimaryBeneficiaries] = useState([
     { id: 1, beneficiaryId: '', relationship: '', allocation: 100, relatedInsured: insured, type: 'primary' }
   ]);
-  
+
   const [contingentBeneficiaries, setContingentBeneficiaries] = useState([]);
   const [storedBeneficiaries, setStoredBeneficiaries] = useState([]);
-  
+
   const [showAddBeneficiaryModal, setShowAddBeneficiaryModal] = useState(false);
   const [currentBeneficiaryRowId, setCurrentBeneficiaryRowId] = useState(null);
   const [currentBeneficiaryType, setCurrentBeneficiaryType] = useState(null);
   const [editingBeneficiary, setEditingBeneficiary] = useState(null);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    setStoredBeneficiaries(beneficiaries);
+
+    if (coverageId && !initialized && Array.isArray(beneficiaries) && coverageBeneficiaries) {
+      const beneficiaryData = coverageBeneficiaries[coverageId];
+
+      if (beneficiaryData) {
+        if (beneficiaryData.primary && beneficiaryData.primary.length > 0) {
+          const primaryRows = beneficiaryData.primary.map((item, index) => ({
+            id: index + 1,
+            beneficiaryId: item.beneficiaryId,
+            relationship: item.relationship || '',
+            allocation: item.allocation || 100 / beneficiaryData.primary.length,
+            relatedInsured: item.relatedInsured || insured,
+            type: 'primary'
+          }));
+          setPrimaryBeneficiaries(primaryRows);
+        }
+
+        if (beneficiaryData.contingent && beneficiaryData.contingent.length > 0) {
+          const contingentRows = beneficiaryData.contingent.map((item, index) => ({
+            id: index + 1,
+            beneficiaryId: item.beneficiaryId,
+            relationship: item.relationship || '',
+            allocation: item.allocation || 100 / beneficiaryData.contingent.length,
+            relatedInsured: item.relatedInsured || insured,
+            type: 'contingent'
+          }));
+          setContingentBeneficiaries(contingentRows);
+        }
+
+        setInitialized(true);
+      }
+    }
+  }, [beneficiaries, coverageId, insured, coverageBeneficiaries, initialized]);
 
   // Create array of insured options
   const insuredOptions = [];
@@ -84,49 +123,49 @@ function BeneficiarySection({
 
   const handleSaveBeneficiary = (beneficiary) => {
     if (!beneficiary) return;
-    
+
     try {
       // Add to stored beneficiaries
       const updatedBeneficiaries = [...storedBeneficiaries];
       const existingIndex = updatedBeneficiaries.findIndex(b => b && beneficiary && b.id === beneficiary.id);
-      
+
       if (existingIndex >= 0) {
         updatedBeneficiaries[existingIndex] = beneficiary;
       } else {
         updatedBeneficiaries.push(beneficiary);
       }
-      
+
       setStoredBeneficiaries(updatedBeneficiaries);
-      
+
       // Update the beneficiary in the appropriate row
       if (currentBeneficiaryType === 'primary') {
-        setPrimaryBeneficiaries(prev => 
-          prev.map(row => 
-            row && row.id === currentBeneficiaryRowId 
-              ? { ...row, beneficiaryId: beneficiary.id } 
+        setPrimaryBeneficiaries(prev =>
+          prev.map(row =>
+            row && row.id === currentBeneficiaryRowId
+              ? { ...row, beneficiaryId: beneficiary.id }
               : row
           )
         );
       } else {
-        setContingentBeneficiaries(prev => 
-          prev.map(row => 
-            row && row.id === currentBeneficiaryRowId 
-              ? { ...row, beneficiaryId: beneficiary.id } 
+        setContingentBeneficiaries(prev =>
+          prev.map(row =>
+            row && row.id === currentBeneficiaryRowId
+              ? { ...row, beneficiaryId: beneficiary.id }
               : row
           )
         );
       }
-      
+
       // Call parent handler
       if (onAddBeneficiary) {
         onAddBeneficiary(beneficiary);
       }
 
       if (onUpdateBeneficiary) {
-        const rowData = currentBeneficiaryType === 'primary' 
+        const rowData = currentBeneficiaryType === 'primary'
           ? primaryBeneficiaries.find(b => b.id === currentBeneficiaryRowId)
           : contingentBeneficiaries.find(b => b.id === currentBeneficiaryRowId);
-          
+
         if (rowData) {
           onUpdateBeneficiary(
             beneficiary.id,
@@ -146,14 +185,14 @@ function BeneficiarySection({
       const newId = primaryBeneficiaries.length > 0
         ? Math.max(...primaryBeneficiaries.filter(b => b).map(b => b.id)) + 1
         : 1;
-      
+
       // When adding a new row, recalculate allocations
       const newAllocation = 100 / (primaryBeneficiaries.length + 1);
       const updatedBeneficiaries = primaryBeneficiaries.map(row => ({
         ...row,
         allocation: parseFloat(newAllocation.toFixed(2))
       }));
-      
+
       setPrimaryBeneficiaries([
         ...updatedBeneficiaries,
         { id: newId, beneficiaryId: '', relationship: '', allocation: parseFloat(newAllocation.toFixed(2)), relatedInsured: insured, type: 'primary' }
@@ -168,18 +207,18 @@ function BeneficiarySection({
       if (primaryBeneficiaries.length <= 1) {
         return;
       }
-      
+
       const updatedBeneficiaries = primaryBeneficiaries.filter(row => row && row.id !== id);
-      
+
       // Recalculate allocations
       const newAllocation = 100 / updatedBeneficiaries.length;
       const distributedBeneficiaries = updatedBeneficiaries.map(row => ({
         ...row,
         allocation: parseFloat(newAllocation.toFixed(2))
       }));
-      
+
       setPrimaryBeneficiaries(distributedBeneficiaries);
-      
+
       if (onRemoveBeneficiary) {
         const removedRow = primaryBeneficiaries.find(row => row && row.id === id);
         if (removedRow && removedRow.beneficiaryId) {
@@ -200,14 +239,14 @@ function BeneficiarySection({
         ]);
       } else {
         const newId = Math.max(...contingentBeneficiaries.filter(b => b).map(b => b.id)) + 1;
-        
+
         // Recalculate allocations
         const newAllocation = 100 / (contingentBeneficiaries.length + 1);
         const updatedBeneficiaries = contingentBeneficiaries.map(row => ({
           ...row,
           allocation: parseFloat(newAllocation.toFixed(2))
         }));
-        
+
         setContingentBeneficiaries([
           ...updatedBeneficiaries,
           { id: newId, beneficiaryId: '', relationship: '', allocation: parseFloat(newAllocation.toFixed(2)), relatedInsured: insured, type: 'contingent' }
@@ -221,7 +260,7 @@ function BeneficiarySection({
   const handleRemoveContingentBeneficiary = (id) => {
     try {
       const updatedBeneficiaries = contingentBeneficiaries.filter(row => row && row.id !== id);
-      
+
       if (updatedBeneficiaries.length === 0) {
         setContingentBeneficiaries([]);
       } else {
@@ -231,10 +270,10 @@ function BeneficiarySection({
           ...row,
           allocation: parseFloat(newAllocation.toFixed(2))
         }));
-        
+
         setContingentBeneficiaries(distributedBeneficiaries);
       }
-      
+
       if (onRemoveBeneficiary) {
         const removedRow = contingentBeneficiaries.find(row => row && row.id === id);
         if (removedRow && removedRow.beneficiaryId) {
@@ -249,17 +288,43 @@ function BeneficiarySection({
   const handleAllocationChange = (id, value, type) => {
     try {
       const numValue = parseFloat(value) || 0;
-      
+
       if (type === 'primary') {
-        const updatedBeneficiaries = primaryBeneficiaries.map(row => 
+        const updatedBeneficiaries = primaryBeneficiaries.map(row =>
           row && row.id === id ? { ...row, allocation: numValue } : row
         );
         setPrimaryBeneficiaries(updatedBeneficiaries);
+
+        // Get the updated row data to send to parent
+        const updatedRow = updatedBeneficiaries.find(row => row && row.id === id);
+        if (updatedRow && updatedRow.beneficiaryId && onUpdateBeneficiary) {
+          // Update the Redux store
+          onUpdateBeneficiary(
+            updatedRow.beneficiaryId,
+            updatedRow.relationship,
+            numValue, // Updated allocation value
+            type,
+            updatedRow.relatedInsured
+          );
+        }
       } else {
-        const updatedBeneficiaries = contingentBeneficiaries.map(row => 
+        const updatedBeneficiaries = contingentBeneficiaries.map(row =>
           row && row.id === id ? { ...row, allocation: numValue } : row
         );
         setContingentBeneficiaries(updatedBeneficiaries);
+
+        // Get the updated row data to send to parent
+        const updatedRow = updatedBeneficiaries.find(row => row && row.id === id);
+        if (updatedRow && updatedRow.beneficiaryId && onUpdateBeneficiary) {
+          // Update the Redux store
+          onUpdateBeneficiary(
+            updatedRow.beneficiaryId,
+            updatedRow.relationship,
+            numValue, // Updated allocation value
+            type,
+            updatedRow.relatedInsured
+          );
+        }
       }
     } catch (error) {
       console.error('Error changing allocation:', error);
@@ -269,15 +334,39 @@ function BeneficiarySection({
   const handleRelationshipChange = (id, value, type) => {
     try {
       if (type === 'primary') {
-        const updatedBeneficiaries = primaryBeneficiaries.map(row => 
+        const updatedBeneficiaries = primaryBeneficiaries.map(row =>
           row && row.id === id ? { ...row, relationship: value } : row
         );
         setPrimaryBeneficiaries(updatedBeneficiaries);
+
+        // Get the updated row data to send to parent
+        const updatedRow = updatedBeneficiaries.find(row => row && row.id === id);
+        if (updatedRow && updatedRow.beneficiaryId && onUpdateBeneficiary) {
+          // Update the Redux store with the new relationship
+          onUpdateBeneficiary(
+            updatedRow.beneficiaryId,
+            value, // Updated relationship value
+            updatedRow.allocation,
+            type
+          );
+        }
       } else {
-        const updatedBeneficiaries = contingentBeneficiaries.map(row => 
+        const updatedBeneficiaries = contingentBeneficiaries.map(row =>
           row && row.id === id ? { ...row, relationship: value } : row
         );
         setContingentBeneficiaries(updatedBeneficiaries);
+
+        // Get the updated row data to send to parent
+        const updatedRow = updatedBeneficiaries.find(row => row && row.id === id);
+        if (updatedRow && updatedRow.beneficiaryId && onUpdateBeneficiary) {
+          // Update the Redux store with the new relationship
+          onUpdateBeneficiary(
+            updatedRow.beneficiaryId,
+            value, // Updated relationship value
+            updatedRow.allocation,
+            type
+          );
+        }
       }
     } catch (error) {
       console.error('Error changing relationship:', error);
@@ -287,15 +376,41 @@ function BeneficiarySection({
   const handleRelatedInsuredChange = (id, value, type) => {
     try {
       if (type === 'primary') {
-        const updatedBeneficiaries = primaryBeneficiaries.map(row => 
+        const updatedBeneficiaries = primaryBeneficiaries.map(row =>
           row && row.id === id ? { ...row, relatedInsured: value } : row
         );
         setPrimaryBeneficiaries(updatedBeneficiaries);
+
+        // Get the updated row data to send to parent
+        const updatedRow = updatedBeneficiaries.find(row => row && row.id === id);
+        if (updatedRow && updatedRow.beneficiaryId && onUpdateBeneficiary) {
+          // Update the Redux store
+          onUpdateBeneficiary(
+            updatedRow.beneficiaryId,
+            updatedRow.relationship,
+            updatedRow.allocation,
+            type,
+            value // Pass relatedInsured value
+          );
+        }
       } else {
-        const updatedBeneficiaries = contingentBeneficiaries.map(row => 
+        const updatedBeneficiaries = contingentBeneficiaries.map(row =>
           row && row.id === id ? { ...row, relatedInsured: value } : row
         );
         setContingentBeneficiaries(updatedBeneficiaries);
+
+        // Get the updated row data to send to parent
+        const updatedRow = updatedBeneficiaries.find(row => row && row.id === id);
+        if (updatedRow && updatedRow.beneficiaryId && onUpdateBeneficiary) {
+          // Update the Redux store
+          onUpdateBeneficiary(
+            updatedRow.beneficiaryId,
+            updatedRow.relationship,
+            updatedRow.allocation,
+            type,
+            value // Pass relatedInsured value
+          );
+        }
       }
     } catch (error) {
       console.error('Error changing related insured:', error);
@@ -356,9 +471,9 @@ function BeneficiarySection({
 
   const renderBeneficiaryRow = (row, type) => {
     if (!row) return null;
-    
+
     const selectedBeneficiary = storedBeneficiaries.find(b => b && row && b.id === row.beneficiaryId);
-    
+
     return (
       <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }} key={`${type}-${row.id}`}>
         <Grid item xs={12} md={4}>
@@ -366,19 +481,19 @@ function BeneficiarySection({
             <InputLabel>{type === 'primary' ? 'Add Beneficiary' : 'Add Contingent Beneficiary'}</InputLabel>
             <Select
               value={row.beneficiaryId || ''}
-              onChange={() => {}}
+              onChange={() => { }}
               label={type === 'primary' ? 'Add Beneficiary' : 'Add Contingent Beneficiary'}
               renderValue={() => formatBeneficiaryInfo(selectedBeneficiary)}
             >
               <MenuItem value="" disabled>Select</MenuItem>
-              <MenuItem 
+              <MenuItem
                 value="add_new"
                 onClick={() => handleAddBeneficiaryClick(row.id, type)}
               >
                 Add Beneficiary
               </MenuItem>
               {selectedBeneficiary && (
-                <MenuItem 
+                <MenuItem
                   value="edit_existing"
                   onClick={() => handleEditBeneficiary(selectedBeneficiary, row.id, type)}
                 >
@@ -433,17 +548,17 @@ function BeneficiarySection({
           />
         </Grid>
         <Grid item xs={12} md={1} sx={{ display: 'flex', justifyContent: 'center' }}>
-          <IconButton 
+          <IconButton
             color="primary"
             onClick={type === 'primary' ? handleAddPrimaryBeneficiary : () => handleAddContingentBeneficiary()}
           >
             <AddIcon />
           </IconButton>
           {(type === 'contingent' || primaryBeneficiaries.length > 1) && (
-            <IconButton 
+            <IconButton
               color="error"
-              onClick={() => type === 'primary' 
-                ? handleRemovePrimaryBeneficiary(row.id) 
+              onClick={() => type === 'primary'
+                ? handleRemovePrimaryBeneficiary(row.id)
                 : handleRemoveContingentBeneficiary(row.id)
               }
             >
@@ -460,24 +575,24 @@ function BeneficiarySection({
       <Typography variant="h6" sx={{ mb: 2 }}>
         {coverageType || 'Coverage'} Beneficiaries
       </Typography>
-      
+
       {renderCoverageInfo()}
-      
+
       <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
         Beneficiaries
       </Typography>
-      
+
       <Box sx={{ mb: 3 }}>
         {primaryBeneficiaries.filter(row => row).map(row => renderBeneficiaryRow(row, 'primary'))}
       </Box>
-      
+
       <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
         Contingent Beneficiaries
       </Typography>
-      
+
       {contingentBeneficiaries.length === 0 ? (
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           startIcon={<AddIcon />}
           onClick={handleAddContingentBeneficiary}
           sx={{ mb: 2 }}
@@ -489,7 +604,7 @@ function BeneficiarySection({
           {contingentBeneficiaries.filter(row => row).map(row => renderBeneficiaryRow(row, 'contingent'))}
         </Box>
       )}
-      
+
       <AddBeneficiaryModal
         open={showAddBeneficiaryModal}
         onClose={() => {

@@ -104,6 +104,14 @@ function PayorSection({ payors = [], onChange, coverageOwners = [], applicationN
         onChange(updatedPayors);
     };
 
+    const handlePayorChange = (id, payorId) => {
+        const updatedPayors = payors.map(row =>
+            row && row.id === id ? { ...row, payorId } : row
+        );
+
+        onChange(updatedPayors);
+    };
+
     const getPayorOptions = () => {
         const options = [];
 
@@ -130,7 +138,7 @@ function PayorSection({ payors = [], onChange, coverageOwners = [], applicationN
                         <InputLabel>Payor</InputLabel>
                         <Select
                             value={row.payorId || ''}
-                            onChange={() => { }}
+                            onChange={(e) => handlePayorChange(row.id, e.target.value)}
                             label="Payor"
                             renderValue={() => {
                                 if (selectedPayor) {
@@ -154,7 +162,6 @@ function PayorSection({ payors = [], onChange, coverageOwners = [], applicationN
                                 <MenuItem
                                     key={option.value}
                                     value={option.value}
-                                    onClick={() => handleAllocationChange(row.id, option.value)}
                                 >
                                     {option.label}
                                 </MenuItem>

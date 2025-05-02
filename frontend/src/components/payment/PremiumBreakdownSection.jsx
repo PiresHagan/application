@@ -137,7 +137,7 @@ function PremiumBreakdownSection({ premiumData, applicationNumber, paymentMode =
     }
 
     return (
-        <Box sx={{ mt: 2, mb: 3 }}>
+        <Box sx={{ mt: 2, mb: 3, maxWidth: '50%' }}>
             <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
                 <AttachMoneyIcon sx={{ mr: 1 }} />
                 Premium Amount & Breakdown
