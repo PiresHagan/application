@@ -34,19 +34,35 @@ public class OwnerService {
         for (OwnerDTO owner : request.getOwners()) {
             String clientGUID = UUID.randomUUID().toString();
             String roleGUID = UUID.randomUUID().toString();
-            String applicationFormGUID = UUID.randomUUID().toString();
+            String applicationFormGUID = getApplicationFormGUID(applicationFormNumber);
+            boolean isUpdate = applicationFormGUID != null;
+            
+            if (applicationFormGUID == null) {
+                applicationFormGUID = UUID.randomUUID().toString();
+            }
+            
             String planGUID = (owner.getPlanGUID() != null && !owner.getPlanGUID().isEmpty()) 
                 ? owner.getPlanGUID() : UUID.randomUUID().toString();
             
             log.info("Saving owner: {}", owner);
 
-            jdbcTemplate.update("""
-                INSERT INTO frapplicationform (
-                    ApplicationFormGUID, ApplicationFormNumber, LastModifiedDate, PlanGUID
-                ) VALUES (?, ?, ?, ?)
-                """,
-                applicationFormGUID, applicationFormNumber, LocalDate.now(), planGUID
-            );
+            if (isUpdate) {
+                log.info("Updating existing application form: {}", applicationFormGUID);
+                jdbcTemplate.update("""
+                    UPDATE frapplicationform SET LastModifiedDate = ?, PlanGUID = ?
+                    WHERE ApplicationFormGUID = ?
+                    """,
+                    LocalDate.now(), planGUID, applicationFormGUID
+                );
+            } else {
+                jdbcTemplate.update("""
+                    INSERT INTO frapplicationform (
+                        ApplicationFormGUID, ApplicationFormNumber, LastModifiedDate, PlanGUID
+                    ) VALUES (?, ?, ?, ?)
+                    """,
+                    applicationFormGUID, applicationFormNumber, LocalDate.now(), planGUID
+                );
+            }
             
             jdbcTemplate.update("""
                 INSERT INTO frclient (
@@ -110,6 +126,24 @@ public class OwnerService {
                     address.getZipCode()
                 );
             }
+        }
+    }
+    
+    /**
+     * Get application form GUID for an application number if it exists
+     * @param applicationNumber The application form number
+     * @return The application form GUID or null if not found
+     */
+    private String getApplicationFormGUID(String applicationNumber) {
+        try {
+            return jdbcTemplate.queryForObject(
+                "SELECT ApplicationFormGUID FROM frapplicationform WHERE ApplicationFormNumber = ?",
+                String.class,
+                applicationNumber
+            );
+        } catch (Exception e) {
+            log.debug("Application form not found for number: {}", applicationNumber);
+            return null;
         }
     }
     

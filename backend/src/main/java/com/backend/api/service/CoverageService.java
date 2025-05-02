@@ -305,4 +305,70 @@ public class CoverageService {
             return new ArrayList<>();
         }
     }
+    
+    /**
+     * Saves premium data for an application form to the frapplicationformdetails table.
+     * 
+     * @param applicationNumber The application number
+     * @param premiumData Map containing premium values
+     */
+    @Transactional
+    public void savePremiumData(String applicationNumber, Map<String, Object> premiumData) {
+        log.info("Saving premium data for application: {}", applicationNumber);
+        
+        String applicationFormGUID = getApplicationFormGUID(applicationNumber);
+        if (applicationFormGUID == null) {
+            throw new RuntimeException("Application form not found for number: " + applicationNumber);
+        }
+        
+        jdbcTemplate.update(
+            "DELETE FROM frapplicationformdetails WHERE ApplicationFormGUID = ? AND FieldName IN (?, ?, ?, ?)",
+            applicationFormGUID, "AnnualPremium", "SemiAnnualPremium", "QuarterlyPremium", "MonthlyPremium"
+        );
+        
+        if (premiumData.containsKey("annualPremium")) {
+            saveApplicationFormDetail(applicationFormGUID, "AnnualPremium", 
+                parseDouble(premiumData.get("annualPremium")), null, null, null);
+        }
+        
+        if (premiumData.containsKey("semiAnnualPremium")) {
+            saveApplicationFormDetail(applicationFormGUID, "SemiAnnualPremium", 
+                parseDouble(premiumData.get("semiAnnualPremium")), null, null, null);
+        }
+        
+        if (premiumData.containsKey("quarterlyPremium")) {
+            saveApplicationFormDetail(applicationFormGUID, "QuarterlyPremium", 
+                parseDouble(premiumData.get("quarterlyPremium")), null, null, null);
+        }
+        
+        if (premiumData.containsKey("monthlyPremium")) {
+            saveApplicationFormDetail(applicationFormGUID, "MonthlyPremium", 
+                parseDouble(premiumData.get("monthlyPremium")), null, null, null);
+        }
+        
+        log.info("Premium data saved successfully for application: {}", applicationNumber);
+    }
+    
+    private Double parseDouble(Object value) {
+        if (value == null) return null;
+        try {
+            if (value instanceof Number) {
+                return ((Number) value).doubleValue();
+            }
+            return Double.parseDouble(value.toString());
+        } catch (NumberFormatException e) {
+            log.error("Error parsing decimal value: {}", value);
+            return null;
+        }
+    }
+    
+    private void saveApplicationFormDetail(String applicationFormGUID, String fieldName, 
+                                        Double decimalValue, Integer integerValue, 
+                                        String textValue, java.time.LocalDate dateValue) {
+        jdbcTemplate.update(
+            "INSERT INTO frapplicationformdetails (ApplicationFormGUID, FieldName, DecimalValue, IntegerValue, TextValue, DateValue) " +
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            applicationFormGUID, fieldName, decimalValue, integerValue, textValue, dateValue
+        );
+    }
 } 

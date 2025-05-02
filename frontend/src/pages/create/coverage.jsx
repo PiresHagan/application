@@ -52,7 +52,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
     const hasBaseCoverageData = Object.keys(storedBaseCoverageData).length > 0;
     const hasAdditionalCoverages = storedAdditionalCoverages.length > 0;
     const hasRiders = storedRiders.length > 0;
-    
+
     return {
       'product': 'selector',
       'product-selector': true,
@@ -64,7 +64,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
       'riders-section': hasRiders
     };
   });
-  
+
   const [sectionValidation, setSectionValidation] = useState({
     base: false,
     additional: false,
@@ -124,7 +124,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
     const newId = additionalCoverages.length > 0
       ? Math.max(...additionalCoverages.map(c => c.id)) + 1
       : 1;
-    
+
     let defaultInsured = '';
     const individualOwners = owners.filter(owner => owner.ownerType === '01');
 
@@ -135,11 +135,11 @@ function Coverage({ applicationNumber, onStepComplete }) {
     //     ...additionalCoverages.map(c => c.insured1)
     //   ].filter(Boolean);  
 
-      // const availableOwner = individualOwners.find(owner => !usedInsuredIds.includes(owner.id));
-      if (individualOwners) {
-        console.log('individualOwners', individualOwners);
-        defaultInsured = individualOwners[0].id;
-      }
+    // const availableOwner = individualOwners.find(owner => !usedInsuredIds.includes(owner.id));
+    if (individualOwners) {
+      console.log('individualOwners', individualOwners);
+      defaultInsured = individualOwners[0].id;
+    }
     // }
 
     const newCoverage = {
@@ -568,16 +568,16 @@ function Coverage({ applicationNumber, onStepComplete }) {
           owners: owners
         }
       };
-      
+
       handleCoverageChange(
-        state, 
-        sectionValidation, 
+        state,
+        sectionValidation,
         applicationNumber,
         dispatch
       );
     }
   }, [
-    sectionValidation.base, 
+    sectionValidation.base,
     productData.planGUID,
     baseCoverageData.faceAmount,
     baseCoverageData.insured1,
@@ -659,7 +659,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
             ssn: newInsured.ssn,
             applicationFormNumber: applicationNumber
           };
-          
+
           try {
             const response = await saveInsured(insuredData).unwrap();
             // Update the owner in the Redux store with the new clientGUID
@@ -697,6 +697,15 @@ function Coverage({ applicationNumber, onStepComplete }) {
 
       dispatch(setAdditionalCoverages(additionalCoverages));
       dispatch(setRiders(riders));
+
+      if (premiumSectionRef.current && premiumSectionRef.current.savePremiumData) {
+        const premiumSaved = await premiumSectionRef.current.savePremiumData();
+        if (!premiumSaved) {
+          console.warn('Premium data could not be saved, but continuing with the process');
+        } else {
+          console.log('Premium data saved successfully');
+        }
+      }
 
       if (response.coverageGUID) {
         const state = {
@@ -766,7 +775,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
       return numValue >= 10000 && numValue <= 5000000;
     };
     if (isFaceAmountValid(baseCoverageData.faceAmount) && isFaceAmountValid(additionalCoverages.faceAmount)) {
-    const calcRequest = createPremiumRequest(state, applicationNumber);
+      const calcRequest = createPremiumRequest(state, applicationNumber);
       if (calcRequest) {
         calculatePremium(calcRequest)
           .unwrap()
@@ -860,7 +869,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
         owners: owners
       }
     };
-    
+
     const calcRequest = createPremiumRequest(currentState, applicationNumber);
     if (calcRequest) {
       try {
@@ -892,7 +901,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
         owners: owners
       }
     };
-    
+
     const calcRequest = createPremiumRequest(currentState, applicationNumber);
     if (calcRequest && premiumSectionRef.current) {
       premiumSectionRef.current.showRequestJson(calcRequest);
@@ -1081,6 +1090,7 @@ function Coverage({ applicationNumber, onStepComplete }) {
               ref={premiumSectionRef}
               onRequestRefresh={handlePremiumRefresh}
               onShowRequestJson={showCurrentRequestJson}
+              applicationNumber={applicationNumber}
             />
           </Box>
         </Grid>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { nextStep, previousStep } from '../../slices/stepSlice';
+import { setPaymentData } from '../../slices/paymentSlice';
 import {
     Box,
     Button,
@@ -19,22 +20,30 @@ import PaymentMethodSection from '../../components/payment/PaymentMethodSection'
 import BankAccountSection from '../../components/payment/BankAccountSection';
 import CreditCardSection from '../../components/payment/CreditCardSection';
 import PremiumBreakdownSection from '../../components/payment/PremiumBreakdownSection';
+import { useSavePaymentDataMutation } from '../../slices/createApiSlice';
 
 function Payment({ applicationNumber, onStepComplete }) {
     const dispatch = useDispatch();
     const premium = useSelector(state => state.premium);
     const coverageOwners = useSelector(state => state.coverageOwners.owners || []);
+    const savedPaymentData = useSelector(state => state.payment);
 
-    const [paymentData, setPaymentData] = useState({
-        paymentMode: 'monthly',
-        paymentMethod: 'ach',
-        bankAccountType: 'enter',
-        authorizeAutoWithdrawal: false,
-        initialPaymentOption: 'upon_approval',
-        authorizePayments: false,
-        payors: [
-            { id: 1, payorId: '', allocation: 100 }
-        ]
+    const [savePaymentDataToAPI, { isLoading }] = useSavePaymentDataMutation();
+
+    const [paymentData, setPaymentDataState] = useState({
+        paymentMode: savedPaymentData.paymentMode || 'monthly',
+        paymentMethod: savedPaymentData.paymentMethod || 'ach',
+        bankAccountType: savedPaymentData.bankAccountType || 'enter',
+        bankAccountInfo: savedPaymentData.bankAccountInfo || null,
+        checkSpecimen: savedPaymentData.checkSpecimen || null,
+        cardInfo: savedPaymentData.cardInfo || null,
+        authorizeAutoWithdrawal: savedPaymentData.authorizeAutoWithdrawal || false,
+        initialPaymentOption: savedPaymentData.initialPaymentOption || 'upon_approval',
+        deferredDate: savedPaymentData.deferredDate || null,
+        authorizePayments: savedPaymentData.authorizePayments || false,
+        payors: savedPaymentData.payors?.length > 0
+            ? savedPaymentData.payors
+            : [{ id: 1, payorId: '', allocation: 100 }]
     });
 
     const [validationStatus, setValidationStatus] = useState({
@@ -67,24 +76,27 @@ function Payment({ applicationNumber, onStepComplete }) {
         if (onStepComplete) {
             onStepComplete(payorsValid && paymentMethodValid && authorizationValid);
         }
-    }, [paymentData, onStepComplete]);
+
+        // Save to Redux store whenever payment data changes
+        dispatch(setPaymentData(paymentData));
+    }, [paymentData, onStepComplete, dispatch]);
 
     const handlePaymentDataChange = (field, value) => {
-        setPaymentData(prev => ({
+        setPaymentDataState(prev => ({
             ...prev,
             [field]: value
         }));
     };
 
     const handlePayorChange = (payors) => {
-        setPaymentData(prev => ({
+        setPaymentDataState(prev => ({
             ...prev,
             payors
         }));
     };
 
     const handleBankAccountInfoChange = (info) => {
-        setPaymentData(prev => ({
+        setPaymentDataState(prev => ({
             ...prev,
             bankAccountInfo: {
                 ...prev.bankAccountInfo,
@@ -94,7 +106,7 @@ function Payment({ applicationNumber, onStepComplete }) {
     };
 
     const handleCardInfoChange = (info) => {
-        setPaymentData(prev => ({
+        setPaymentDataState(prev => ({
             ...prev,
             cardInfo: {
                 ...prev.cardInfo,
@@ -103,7 +115,7 @@ function Payment({ applicationNumber, onStepComplete }) {
         }));
     };
 
-    const handleSaveAndContinue = () => {
+    const handleSaveAndContinue = async () => {
         if (!validationStatus.payors) {
             toast.error('Please select at least one payor');
             return;
@@ -119,9 +131,36 @@ function Payment({ applicationNumber, onStepComplete }) {
             return;
         }
 
-        // TODO: Save payment data to Redux store and API
+        try {
+            // Save to API
+            await savePaymentDataToAPI({
+                applicationNumber,
+                paymentData: {
+                    paymentMode: paymentData.paymentMode,
+                    paymentMethod: paymentData.paymentMethod,
+                    initialPaymentOption: paymentData.initialPaymentOption,
+                    payors: paymentData.payors,
+                    // Only include payment method specific data
+                    ...(paymentData.paymentMethod === 'ach' && {
+                        bankAccountType: paymentData.bankAccountType,
+                        bankAccountInfo: paymentData.bankAccountInfo,
+                        // We don't send the actual file to the API
+                        hasCheckSpecimen: !!paymentData.checkSpecimen,
+                        authorizeAutoWithdrawal: paymentData.authorizeAutoWithdrawal
+                    }),
+                    ...(paymentData.paymentMethod === 'card' && {
+                        cardInfo: paymentData.cardInfo
+                    }),
+                    authorizePayments: paymentData.authorizePayments
+                }
+            }).unwrap();
 
-        dispatch(nextStep());
+            toast.success('Payment information saved successfully');
+            dispatch(nextStep());
+        } catch (error) {
+            console.error('Error saving payment data:', error);
+            toast.error('Error saving payment data: ' + (error.data?.message || error.message || 'Unknown error'));
+        }
     };
 
     return (
@@ -173,6 +212,15 @@ function Payment({ applicationNumber, onStepComplete }) {
                     </Grid>
                 </RadioGroup>
 
+                {/* Premium Breakdown Section */}
+                <PremiumBreakdownSection
+                    premiumData={premium}
+                    applicationNumber={applicationNumber}
+                    paymentMode={paymentData.paymentMode}
+                />
+
+                <Divider sx={{ my: 3 }} />
+
                 <PaymentMethodSection
                     value={paymentData.paymentMethod}
                     onChange={(value) => handlePaymentDataChange('paymentMethod', value)}
@@ -220,8 +268,6 @@ function Payment({ applicationNumber, onStepComplete }) {
                 </RadioGroup>
             </Paper>
 
-            <PremiumBreakdownSection premiumData={premium} />
-
             <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
                 <Typography variant="h6" sx={{ mb: 2 }}>
                     Authorization & Consent
@@ -249,8 +295,9 @@ function Payment({ applicationNumber, onStepComplete }) {
                 <Button
                     variant="contained"
                     onClick={handleSaveAndContinue}
+                    disabled={isLoading}
                 >
-                    Next
+                    {isLoading ? 'Saving...' : 'Next'}
                 </Button>
             </Box>
         </Box>

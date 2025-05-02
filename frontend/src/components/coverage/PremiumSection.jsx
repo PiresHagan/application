@@ -3,16 +3,17 @@ import { Box, Paper, Typography, Divider, CircularProgress, Button, Stack } from
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CodeIcon from '@mui/icons-material/Code';
 import { useSelector, useDispatch } from 'react-redux';
-import { useCalculatePremiumMutation, setPremiumData } from '../../slices/premiumSlice';
+import { useCalculatePremiumMutation, useSavePremiumMutation, setPremiumData } from '../../slices/premiumSlice';
 import { createPremiumRequest, formatPremiumResult } from '../../utils/premiumCalculation';
 
-const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref) => {
+const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson, applicationNumber }, ref) => {
   const dispatch = useDispatch();
   const premiumData = useSelector(state => state.premium?.premiumData);
   const outdated = useSelector(state => state.premium?.outdated);
-  const applicationNumber = useSelector(state => state.application?.applicationNumber);
-  
+  console.log('applicationNumber', applicationNumber);
+
   const [calculatePremium, { isLoading, error }] = useCalculatePremiumMutation();
+  const [savePremium, { isLoading: isSaving }] = useSavePremiumMutation();
   const [lastRequest, setLastRequest] = useState(null);
   const [lastResponse, setLastResponse] = useState(null);
 
@@ -30,6 +31,33 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
     showRequestJson: (request) => {
       // Method to be called from parent with the latest request data
       showJsonInNewTab(request, 'Premium Calculation Request');
+    },
+    savePremiumData: async () => {
+      console.log('savePremiumData', premiumData, applicationNumber);
+      if (!premiumData || !applicationNumber) {
+        console.error('Cannot save premium data: Missing premium data or application number');
+        return false;
+      }
+
+      try {
+        const premiumDataToSave = {
+          annualPremium: premiumData.annualPremium,
+          semiAnnualPremium: premiumData.semiAnnualPremium,
+          quarterlyPremium: premiumData.quarterlyPremium,
+          monthlyPremium: premiumData.monthlyPremium
+        };
+
+        await savePremium({
+          applicationNumber,
+          premiumData: premiumDataToSave
+        }).unwrap();
+
+        console.log('Premium data saved successfully');
+        return true;
+      } catch (error) {
+        console.error('Error saving premium data:', error);
+        return false;
+      }
     }
   }));
 
@@ -89,23 +117,23 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
     if (premiumData) {
       // Show the raw data structure before formatting
       const rawApiResponse = {};
-      
+
       // Extract application ID from the premium data
       const appGuid = Object.keys(premiumData)
         .find(key => key.includes('_totalAnnualPremium'))
         ?.split('_totalAnnualPremium')[0] || applicationNumber || 'APP-000000';
-      
+
       if (appGuid) {
         // Recreate raw API response structure
         rawApiResponse[`${appGuid}_totalAnnualPremium`] = parseFloat(premiumData.annualPremium);
         rawApiResponse[`${appGuid}_totalMonthlyPremium`] = parseFloat(premiumData.monthlyPremium);
         rawApiResponse[`${appGuid}_totalQuarterlyPremium`] = parseFloat(premiumData.quarterlyPremium);
         rawApiResponse[`${appGuid}_totalSemiAnnualPremium`] = parseFloat(premiumData.semiAnnualPremium);
-        
+
         // Add base premium
         const baseCoverageGUID = coverageState.coverage.base.coverageGUID || 'COV-base-1';
         rawApiResponse[`${baseCoverageGUID}_premium`] = parseFloat(premiumData.basePremium);
-        
+
         // Add additional premiums if present
         if (premiumData.additionalPremiums && premiumData.additionalPremiums.length > 0) {
           premiumData.additionalPremiums.forEach((premium, index) => {
@@ -114,7 +142,7 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
           });
         }
       }
-      
+
       showJsonInNewTab(lastResponse || rawApiResponse, 'Premium Calculation Response');
     }
   };
@@ -139,9 +167,9 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
         <Typography color="error" sx={{ mt: 2 }}>
           Error calculating premium: {error.data?.message || error.error}
         </Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<RefreshIcon />} 
+        <Button
+          variant="contained"
+          startIcon={<RefreshIcon />}
           onClick={handleRefreshPremium}
           sx={{ mt: 2 }}
         >
@@ -159,9 +187,9 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
         <Typography sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
           Loading premium calculation...
         </Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<RefreshIcon />} 
+        <Button
+          variant="contained"
+          startIcon={<RefreshIcon />}
           onClick={handleRefreshPremium}
           sx={{ mt: 2 }}
         >
@@ -186,7 +214,7 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
         </Button> */}
       </Box>
       <Divider sx={{ mb: 2 }} />
-      
+
       {/* {outdated && (
         <Typography 
           sx={{ 
@@ -205,7 +233,7 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
           <RefreshIcon sx={{ mr: 1 }} /> Calculation not up to date. Please refresh.
         </Typography>
       )} */}
-      
+
       <Box sx={{ mt: 2, mb: 3 }}>
         <Typography variant="subtitle1" fontWeight="bold">
           Total Premium
@@ -217,11 +245,11 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
           {premiumData.frequency || 'Annual'} premium amount
         </Typography>
       </Box>
-      
+
       <Divider sx={{ mb: 2 }} />
-      
+
       <Typography variant="subtitle2" gutterBottom>Premium Breakdown</Typography>
-      
+
       {/* Base Coverage */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="body2">Base Coverage:</Typography>
@@ -229,7 +257,7 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
           ${premiumData.basePremium || '0.00'}
         </Typography>
       </Box>
-      
+
       {/* Additional Coverages */}
       {premiumData.additionalPremiums && premiumData.additionalPremiums.map((premium, index) => (
         <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -239,7 +267,7 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
           </Typography>
         </Box>
       ))}
-      
+
       {/* Riders */}
       {premiumData.riderPremiums && premiumData.riderPremiums.map((premium, index) => (
         <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -249,42 +277,42 @@ const PremiumSection = forwardRef(({ onRequestRefresh, onShowRequestJson }, ref)
           </Typography>
         </Box>
       ))}
-      
+
       <Divider sx={{ my: 2 }} />
-      
+
       {/* Payment Options */}
       <Typography variant="subtitle2" gutterBottom>Payment Options</Typography>
-      
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="body2">Annual:</Typography>
         <Typography variant="body2" fontWeight="bold">
           ${premiumData.annualPremium || premiumData.totalPremium || '0.00'}
         </Typography>
       </Box>
-      
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="body2">Semi-Annual:</Typography>
         <Typography variant="body2" fontWeight="bold">
           ${premiumData.semiAnnualPremium || '0.00'}
         </Typography>
       </Box>
-      
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="body2">Quarterly:</Typography>
         <Typography variant="body2" fontWeight="bold">
           ${premiumData.quarterlyPremium || '0.00'}
         </Typography>
       </Box>
-      
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="body2">Monthly:</Typography>
         <Typography variant="body2" fontWeight="bold">
           ${premiumData.monthlyPremium || '0.00'}
         </Typography>
       </Box>
-      
+
       <Divider sx={{ my: 2 }} />
-      
+
       <Typography variant="caption" color="text.secondary">
         Last calculated: {premiumData.calculationDate || new Date().toLocaleString()}
       </Typography>

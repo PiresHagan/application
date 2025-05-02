@@ -10,10 +10,17 @@ export const premiumApiSlice = apiSlice.injectEndpoints({
         body: data,
       }),
     }),
+    savePremium: builder.mutation({
+      query: ({ applicationNumber, premiumData }) => ({
+        url: `/api/coverage/premium/${applicationNumber}`,
+        method: 'POST',
+        body: premiumData,
+      }),
+    }),
   }),
 });
 
-export const { useCalculatePremiumMutation } = premiumApiSlice;
+export const { useCalculatePremiumMutation, useSavePremiumMutation } = premiumApiSlice;
 
 const initialState = {
   premiumData: null,

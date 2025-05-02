@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/coverage")
@@ -53,5 +54,25 @@ public class CoverageController {
         log.info("Fetching additional coverage definitions for plan: {}", planGUID);
         List<Map<String, String>> definitions = coverageService.getAdditionalCoverageDefinitions(planGUID);
         return ResponseEntity.ok(definitions);
+    }
+    
+    @PostMapping("/premium/{applicationNumber}")
+    public ResponseEntity<Map<String, String>> savePremiumData(
+            @PathVariable String applicationNumber,
+            @RequestBody Map<String, Object> premiumData) {
+        log.info("Received request to save premium data for application: {}", applicationNumber);
+        try {
+            coverageService.savePremiumData(applicationNumber, premiumData);
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Premium data saved successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error saving premium data: {}", e.getMessage(), e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", "Failed to save premium data: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
 } 

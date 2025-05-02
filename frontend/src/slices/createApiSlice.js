@@ -97,6 +97,17 @@ export const createApiSlice = apiSlice.injectEndpoints({
         body: medicalData
       })
     }),
+    getApplicationPremium: builder.query({
+      query: (applicationNumber) => `/api/premium/${applicationNumber}`,
+      keepUnusedDataFor: 60,
+    }),
+    savePaymentData: builder.mutation({
+      query: ({ applicationNumber, paymentData }) => ({
+        url: `/api/payment/${applicationNumber}`,
+        method: 'POST',
+        body: paymentData
+      })
+    }),
   }),
 });
 
@@ -114,4 +125,6 @@ export const {
   useSearchApplicationsQuery,
   useGetMyApplicationsQuery,
   useSaveMedicalDataMutation,
+  useGetApplicationPremiumQuery,
+  useSavePaymentDataMutation,
 } = createApiSlice; 
