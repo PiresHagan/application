@@ -16,10 +16,11 @@ import AddressInfo from '../owner/AddressInfo';
 import CorporateInfo from '../owner/CorporateInfo';
 import { validateSection, validateField } from '../../utils/validations';
 import { toast } from 'react-toastify';
-import { useSaveOwnersMutation } from '../../slices/createApiSlice';
+import { useGetDropdownValuesQuery, useSaveOwnersMutation } from '../../slices/createApiSlice';
 
 function AddPayorModal({ open, onClose, onSave, payors, editingPayor, applicationNumber }) {
     const [saveOwners, { isLoading }] = useSaveOwnersMutation();
+    const { data: dropdownValuesData, isLoading: isLoadingDropdowns } = useGetDropdownValuesQuery();
 
     const getNewId = () => {
         if (payors.length === 0) return 1;
@@ -39,6 +40,20 @@ function AddPayorModal({ open, onClose, onSave, payors, editingPayor, applicatio
     const [payor, setPayor] = useState(editingPayor || INITIAL_PAYOR);
     const [formErrors, setFormErrors] = useState(false);
     const [attemptedFields, setAttemptedFields] = useState({});
+    const [dropdownValues, setDropdownValues] = useState({
+        countries: [],
+        states: [],
+        provinces: [],
+        gender: [],
+        tobacco: [],
+        occupation: []
+    });
+
+    useEffect(() => {
+        if (dropdownValuesData) {
+            setDropdownValues(dropdownValuesData);
+        }
+    }, [dropdownValuesData]);
 
     useEffect(() => {
         if (open) {
@@ -173,7 +188,7 @@ function AddPayorModal({ open, onClose, onSave, payors, editingPayor, applicatio
                         zipCode: payor.mailingZipCode
                     }] : [])
                 ],
-                roleCode: '03'
+                roleCode: '05'
             };
         } else {
             return {
@@ -205,7 +220,7 @@ function AddPayorModal({ open, onClose, onSave, payors, editingPayor, applicatio
                         zipCode: payor.mailingZipCode
                     }] : [])
                 ],
-                roleCode: '03'
+                roleCode: '05'
             };
         }
     };
@@ -271,27 +286,6 @@ function AddPayorModal({ open, onClose, onSave, payors, editingPayor, applicatio
     };
 
     const mailingAddressRef = React.useRef(null);
-
-    const dropdownValues = {
-        countries: [
-            { code: '01', description: 'United States' },
-            { code: '02', description: 'Canada' }
-        ],
-        states: [
-            { code: 'NY', description: 'New York' },
-            { code: 'CA', description: 'California' },
-            { code: 'TX', description: 'Texas' }
-        ],
-        provinces: [
-            { code: 'ON', description: 'Ontario' },
-            { code: 'BC', description: 'British Columbia' },
-            { code: 'QC', description: 'Quebec' }
-        ],
-        gender: [
-            { code: 'male', description: 'Male' },
-            { code: 'female', description: 'Female' }
-        ]
-    };
 
     return (
         <Dialog
@@ -360,7 +354,7 @@ function AddPayorModal({ open, onClose, onSave, payors, editingPayor, applicatio
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained" disabled={isLoading}>
+                <Button onClick={handleSave} variant="contained" disabled={isLoading || isLoadingDropdowns}>
                     {isLoading ? 'Saving...' : (editingPayor ? 'Update' : 'Save')}
                 </Button>
             </DialogActions>
