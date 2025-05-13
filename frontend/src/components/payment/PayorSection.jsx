@@ -117,7 +117,7 @@ function PayorSection({ payors = [], onChange, coverageOwners = [], applicationN
 
         coverageOwners.filter(owner => owner.ownerType === '01').forEach(owner => {
             options.push({
-                value: `owner-${owner.id}`,
+                value: owner.id,
                 label: `${owner.firstName} ${owner.lastName} (Owner)`
             });
         });
@@ -145,12 +145,9 @@ function PayorSection({ payors = [], onChange, coverageOwners = [], applicationN
                                     return formatPayorInfo(selectedPayor);
                                 }
 
-                                if (row.payorId && row.payorId.startsWith('owner-')) {
-                                    const ownerId = row.payorId.split('-')[1];
-                                    const owner = coverageOwners.find(o => o.id.toString() === ownerId);
-                                    if (owner) {
-                                        return `${owner.firstName} ${owner.lastName} (Owner)`;
-                                    }
+                                const owner = coverageOwners.find(o => o.id === row.payorId);
+                                if (owner) {
+                                    return `${owner.firstName} ${owner.lastName} (Owner)`;
                                 }
 
                                 return 'Select';

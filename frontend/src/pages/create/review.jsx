@@ -145,6 +145,43 @@ function Review({ applicationNumber, onStepComplete }) {
     dispatch(nextStep());
   };
 
+  const getInsuredForCoverage = (coverageData) => {
+    if (!coverageData) return null;
+    
+    if (coverageData.insured1) {
+      return coverageOwners.find(owner => owner.id === coverageData.insured1);
+    }
+    
+    if (coverageData.selectedPerson) {
+      return coverageOwners.find(owner => owner.id === coverageData.selectedPerson);
+    }
+    
+    return null;
+  };
+
+  const getBeneficiariesForCoverage = (coverageId) => {
+    const beneficiaryData = coverageBeneficiaries[coverageId];
+    if (!beneficiaryData) return [];
+    
+    const allBeneficiaryRefs = [
+      ...(beneficiaryData.primary || []),
+      ...(beneficiaryData.contingent || [])
+    ];
+    
+    return allBeneficiaryRefs.map(ref => {
+      const beneficiary = beneficiaries.find(b => b.id === ref.beneficiaryId);
+      if (!beneficiary) return null;
+      
+      return {
+        ...beneficiary,
+        relationship: ref.relationship,
+        allocation: ref.allocation,
+        type: beneficiaryData.primary?.some(b => b.beneficiaryId === ref.beneficiaryId) 
+          ? 'Primary' : 'Contingent'
+      };
+    }).filter(item => item !== null);
+  };
+
   return (
     <Box sx={{ pb: 3 }}>
       <Typography variant="h5" sx={{ mb: 3 }}>
@@ -187,172 +224,422 @@ function Review({ applicationNumber, onStepComplete }) {
                   <TableCell>{owner.ownerType === '01' ? 'Individual' : 'Corporate'}</TableCell>
                 </TableRow>
               ))}
-              
-              {coverageOwners
-                .filter(owner => !owners.some(o => o.id === owner.id))
-                .map((insured, index) => (
-                  <TableRow key={`insured-${insured.id}`} hover>
-                    <TableCell>{`${insured.firstName || ''} ${insured.lastName || ''}`}</TableCell>
-                    <TableCell>Insured</TableCell>
-                    <TableCell>{insured.dateOfBirth || 'N/A'}</TableCell>
-                    <TableCell>{insured.gender || 'N/A'}</TableCell>
-                    <TableCell>{insured.countryCode === '01' ? 'US' : insured.countryCode === '02' ? 'Canada' : 'N/A'}</TableCell>
-                    <TableCell>{insured.tobacco ? 'Yes' : 'No'}</TableCell>
-                    <TableCell>{formatMaskedSSN(insured.ssn)}</TableCell>
-                    <TableCell>Individual</TableCell>
-                  </TableRow>
-                ))}
             </TableBody>
           </Table>
         </TableContainer>
       </Paper>
 
+      {/* Base Coverage Section */}
       <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
-          Coverage Details
+          Base Coverage
         </Typography>
         
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2">Product / Plan</Typography>
-            <Typography variant="body1">{coverage.product?.product || 'N/A'} / {coverage.product?.plan || 'N/A'}</Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2">Face Amount</Typography>
-            <Typography variant="body1">{formatCurrency(coverage.base?.faceAmount)}</Typography>
-          </Grid>
-          
+        <Grid container spacing={3}>
+          {/* Coverage Details */}
           <Grid item xs={12}>
-            <Typography variant="subtitle2">Riders</Typography>
-            {coverage.riders && coverage.riders.length > 0 ? (
+            <Typography variant="subtitle1" gutterBottom>Coverage Details</Typography>
+            <TableContainer>
+              <Table size="medium">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Product / Plan</TableCell>
+                    <TableCell>Face Amount</TableCell>
+                    <TableCell>Coverage Type</TableCell>
+                    <TableCell>Premium ({getPaymentFrequency()})</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow hover>
+                    <TableCell>{coverage.product?.product || 'N/A'} / {coverage.product?.plan || 'N/A'}</TableCell>
+                    <TableCell>{formatCurrency(coverage.base?.faceAmount)}</TableCell>
+                    <TableCell>{coverage.base?.coverageType === 'joint' ? 'Joint' : 'Single'}</TableCell>
+                    <TableCell>{getPremiumAmount()}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Grid>
+          
+          {/* Insured Information */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>Insured Information</Typography>
+            <TableContainer>
+              <Table size="medium">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Date of Birth</TableCell>
+                    <TableCell>Gender</TableCell>
+                    <TableCell>Citizenship</TableCell>
+                    <TableCell>Tobacco</TableCell>
+                    <TableCell>SSN</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {/* Primary Insured */}
+                  {coverage.base?.insured1 && (
+                    <TableRow hover>
+                      {(() => {
+                        const insured = coverageOwners.find(owner => owner.id == coverage.base.insured1);
+                        if (!insured) return <TableCell colSpan={6}></TableCell>;
+                        
+                        return (
+                          <>
+                            <TableCell>{`${insured.firstName || ''} ${insured.lastName || ''}`}</TableCell>
+                            <TableCell>{insured.dateOfBirth || 'N/A'}</TableCell>
+                            <TableCell>{insured.gender || 'N/A'}</TableCell>
+                            <TableCell>{insured.countryCode === '01' ? 'US' : insured.countryCode === '02' ? 'Canada' : 'N/A'}</TableCell>
+                            <TableCell>{insured.tobacco ? 'Yes' : 'No'}</TableCell>
+                            <TableCell>{formatMaskedSSN(insured.ssn)}</TableCell>
+                          </>
+                        );
+                      })()}
+                    </TableRow>
+                  )}
+                  
+                  {coverage.base?.coverageType === 'joint' && coverage.base?.insured2 && (
+                    <TableRow hover>
+                      {(() => {
+                        const insured = coverageOwners.find(owner => owner.id === coverage.base.insured2);
+                        if (!insured) return <TableCell colSpan={6}></TableCell>;
+                        
+                        return (
+                          <>
+                            <TableCell>{`${insured.firstName || ''} ${insured.lastName || ''}`}</TableCell>
+                            <TableCell>{insured.dateOfBirth || 'N/A'}</TableCell>
+                            <TableCell>{insured.gender || 'N/A'}</TableCell>
+                            <TableCell>{insured.countryCode === '01' ? 'US' : insured.countryCode === '02' ? 'Canada' : 'N/A'}</TableCell>
+                            <TableCell>{insured.tobacco ? 'Yes' : 'No'}</TableCell>
+                            <TableCell>{formatMaskedSSN(insured.ssn)}</TableCell>
+                          </>
+                        );
+                      })()}
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Grid>
+          
+          {/* Beneficiary Information */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>Beneficiary Information</Typography>
+            {(() => {
+              const baseBeneficiaries = getBeneficiariesForCoverage('base');
+              
+              if (baseBeneficiaries.length === 0) {
+                return <Typography variant="body2">No beneficiaries designated for this coverage.</Typography>;
+              }
+              
+              return (
+                <TableContainer>
+                  <Table size="medium">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Type</TableCell>
+                        <TableCell>Relationship</TableCell>
+                        <TableCell>Allocation</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {baseBeneficiaries.map((beneficiary, index) => (
+                        <TableRow key={`base-beneficiary-${beneficiary.id}-${index}`} hover>
+                          <TableCell>{`${beneficiary.firstName || ''} ${beneficiary.lastName || ''}`}</TableCell>
+                          <TableCell>{beneficiary.type}</TableCell>
+                          <TableCell>{formatRelationship(beneficiary.relationship)}</TableCell>
+                          <TableCell>{`${beneficiary.allocation || 0}%`}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              );
+            })()}
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Additional Coverages Section */}
+      {coverage.additional && coverage.additional.length > 0 && (
+        <>
+          {coverage.additional.map((additionalCoverage, index) => (
+            <Paper key={`additional-${index}`} elevation={2} sx={{ p: 3, mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Additional Coverage: {additionalCoverage.coverage || 'Unknown'}
+              </Typography>
+              
+              <Grid container spacing={3}>
+                {/* Coverage Details */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>Coverage Details</Typography>
+                  <TableContainer>
+                    <Table size="medium">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Coverage Type</TableCell>
+                          <TableCell>Face Amount</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        <TableRow hover>
+                          <TableCell>{additionalCoverage.coverage || 'N/A'}</TableCell>
+                          <TableCell>{formatCurrency(additionalCoverage.faceAmount)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Grid>
+                
+                {/* Insured Information */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>Insured Information</Typography>
+                  <TableContainer>
+                    <Table size="medium">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Name</TableCell>
+                          <TableCell>Date of Birth</TableCell>
+                          <TableCell>Gender</TableCell>
+                          <TableCell>Citizenship</TableCell>
+                          <TableCell>Tobacco</TableCell>
+                          <TableCell>SSN</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {(() => {
+                          const insured = coverageOwners.find(owner => owner.id === additionalCoverage.insured1);
+                          if (!insured) return (
+                            <TableRow hover>
+                              <TableCell colSpan={6}>Insured information not found</TableCell>
+                            </TableRow>
+                          );
+                          
+                          return (
+                            <TableRow hover>
+                              <TableCell>{`${insured.firstName || ''} ${insured.lastName || ''}`}</TableCell>
+                              <TableCell>{insured.dateOfBirth || 'N/A'}</TableCell>
+                              <TableCell>{insured.gender || 'N/A'}</TableCell>
+                              <TableCell>{insured.countryCode === '01' ? 'US' : insured.countryCode === '02' ? 'Canada' : 'N/A'}</TableCell>
+                              <TableCell>{insured.tobacco ? 'Yes' : 'No'}</TableCell>
+                              <TableCell>{formatMaskedSSN(insured.ssn)}</TableCell>
+                            </TableRow>
+                          );
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Grid>
+                
+                {/* Beneficiary Information */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>Beneficiary Information</Typography>
+                  {(() => {
+                    const beneficiariesForCoverage = getBeneficiariesForCoverage(additionalCoverage.id);
+                    
+                    if (beneficiariesForCoverage.length === 0) {
+                      return <Typography variant="body2">No beneficiaries designated for this coverage.</Typography>;
+                    }
+                    
+                    return (
+                      <TableContainer>
+                        <Table size="medium">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Name</TableCell>
+                              <TableCell>Type</TableCell>
+                              <TableCell>Relationship</TableCell>
+                              <TableCell>Allocation</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {beneficiariesForCoverage.map((beneficiary, idx) => (
+                              <TableRow key={`additional-${index}-beneficiary-${beneficiary.id}-${idx}`} hover>
+                                <TableCell>{`${beneficiary.firstName || ''} ${beneficiary.lastName || ''}`}</TableCell>
+                                <TableCell>{beneficiary.type}</TableCell>
+                                <TableCell>{formatRelationship(beneficiary.relationship)}</TableCell>
+                                <TableCell>{`${beneficiary.allocation || 0}%`}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    );
+                  })()}
+                </Grid>
+              </Grid>
+            </Paper>
+          ))}
+        </>
+      )}
+
+      {coverage.riders && coverage.riders.length > 0 && (
+        <>
+          {coverage.riders.filter(rider => rider.type && rider.type.toLowerCase().includes('accidental')).map((rider, index) => (
+            <Paper key={`rider-${index}`} elevation={2} sx={{ p: 3, mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Rider: {rider.type || 'Unknown'}
+              </Typography>
+              
+              <Grid container spacing={3}>
+                {/* Rider Details */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>Rider Details</Typography>
+                  <TableContainer>
+                    <Table size="medium">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Rider Type</TableCell>
+                          <TableCell>Face Amount</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        <TableRow hover>
+                          <TableCell>{rider.type || 'Unknown'}</TableCell>
+                          <TableCell>{formatCurrency(rider.faceAmount)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Grid>
+                
+                {/* Beneficiary Information */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>Beneficiary Information</Typography>
+                  {(() => {
+                    const beneficiariesForRider = getBeneficiariesForCoverage(`rider-${rider.id}`);
+                    
+                    if (beneficiariesForRider.length === 0) {
+                      return <Typography variant="body2">No beneficiaries designated for this rider.</Typography>;
+                    }
+                    
+                    return (
+                      <TableContainer>
+                        <Table size="medium">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Name</TableCell>
+                              <TableCell>Type</TableCell>
+                              <TableCell>Relationship</TableCell>
+                              <TableCell>Allocation</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {beneficiariesForRider.map((beneficiary, idx) => (
+                              <TableRow key={`rider-${index}-beneficiary-${beneficiary.id}-${idx}`} hover>
+                                <TableCell>{`${beneficiary.firstName || ''} ${beneficiary.lastName || ''}`}</TableCell>
+                                <TableCell>{beneficiary.type}</TableCell>
+                                <TableCell>{formatRelationship(beneficiary.relationship)}</TableCell>
+                                <TableCell>{`${beneficiary.allocation || 0}%`}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    );
+                  })()}
+                </Grid>
+              </Grid>
+            </Paper>
+          ))}
+        </>
+      )}
+
+      {/* Payor & Payment Information */}
+      <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Payor & Payment Information
+        </Typography>
+        
+        <Grid container spacing={3}>
+          {/* Payor Information */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>Payor Information</Typography>
+            {paymentData.payors && paymentData.payors.length > 0 ? (
               <TableContainer>
                 <Table size="medium">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Rider Type</TableCell>
-                      <TableCell>Face Amount</TableCell>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Allocation</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {coverage.riders.map((rider, index) => (
-                      <TableRow key={`rider-${index}`} hover>
-                        <TableCell>{rider.type || 'Unknown'}</TableCell>
-                        <TableCell>{formatCurrency(rider.faceAmount)}</TableCell>
-                      </TableRow>
-                    ))}
+                    {paymentData.payors.map((payor, index) => {
+                      const payorInfo = [...owners, ...coverageOwners]
+                        .find(person => person.id.toString() === payor.payorId?.toString());
+                        
+                      return (
+                        <TableRow key={`payor-${index}`} hover>
+                          <TableCell>
+                            {payorInfo ? 
+                              `${payorInfo.firstName || ''} ${payorInfo.lastName || ''}` : 
+                              'Unknown Payor'}
+                          </TableCell>
+                          <TableCell>{`${payor.allocation || 0}%`}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
             ) : (
-              <Typography variant="body1">No riders selected</Typography>
+              <Typography variant="body2">No payors designated.</Typography>
             )}
           </Grid>
           
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2">Premium Frequency</Typography>
-            <Typography variant="body1">{getPaymentFrequency()}</Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2">Premium Amount</Typography>
-            <Typography variant="body1">{getPremiumAmount()}</Typography>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Beneficiary Information
-        </Typography>
-        
-        <TableContainer>
-          <Table size="medium">
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Coverage</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Relationship</TableCell>
-                <TableCell>Allocation</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {Object.entries(coverageBeneficiaries).map(([coverageId, beneficiaryData]) => {
-                // Get coverage name
-                let coverageName = 'Base Coverage';
-                if (coverageId !== 'base') {
-                  if (coverageId.startsWith('rider-')) {
-                    const riderId = coverageId.replace('rider-', '');
-                    const rider = coverage.riders.find(r => r.id == riderId);
-                    coverageName = rider ? `Rider: ${rider.type}` : 'Unknown Rider';
-                  } else {
-                    const additionalCoverage = coverage.additional.find(c => c.id == coverageId);
-                    coverageName = additionalCoverage ? `Additional: ${additionalCoverage.coverage}` : 'Unknown Coverage';
-                  }
-                }
-                
-                return [...(beneficiaryData.primary || []), ...(beneficiaryData.contingent || [])].map((beneficiaryRef, i) => {
-                  const beneficiary = beneficiaries.find(b => b.id === beneficiaryRef.beneficiaryId);
-                  if (!beneficiary) return null;
-                  
-                  return (
-                    <TableRow key={`${coverageId}-${beneficiaryRef.beneficiaryId}-${i}`} hover>
-                      <TableCell>{`${beneficiary.firstName || ''} ${beneficiary.lastName || ''}`}</TableCell>
-                      <TableCell>{coverageName}</TableCell>
-                      <TableCell>{beneficiaryData.primary?.some(b => b.beneficiaryId === beneficiary.id) ? 'Primary' : 'Contingent'}</TableCell>
-                      <TableCell>{formatRelationship(beneficiaryRef.relationship)}</TableCell>
-                      <TableCell>{`${beneficiaryRef.allocation || 0}%`}</TableCell>
-                    </TableRow>
-                  );
-                });
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
-
-      <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Payment Information
-        </Typography>
-        
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2">Payment Method</Typography>
-            <Typography variant="body1">{getPaymentMethod()}</Typography>
-          </Grid>
-          
-          {paymentData.paymentMethod === 'ach' && (
-            <>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2">Bank Name</Typography>
-                <Typography variant="body1">{getBankName()}</Typography>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2">Account Number</Typography>
-                <Typography variant="body1">{getMaskedAccountNumber()}</Typography>
-              </Grid>
-            </>
-          )}
-          
-          {paymentData.paymentMethod === 'card' && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2">Card Number</Typography>
-              <Typography variant="body1">{getMaskedAccountNumber()}</Typography>
-            </Grid>
-          )}
-          
+          {/* Payment Details */}
           <Grid item xs={12}>
-            <Typography variant="subtitle2">Cash With Application</Typography>
-            <Typography variant="body1">
-              {paymentData.initialPaymentOption === 'cash_with_app' ? '✅ Selected' : '❌ Not Selected'}
-            </Typography>
+            <Typography variant="subtitle1" gutterBottom>Payment Details</Typography>
+            <TableContainer>
+              <Table size="medium">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Payment Method</TableCell>
+                    <TableCell>Payment Frequency</TableCell>
+                    <TableCell>Premium Amount</TableCell>
+                    {paymentData.paymentMethod === 'ach' && (
+                      <>
+                        <TableCell>Bank Name</TableCell>
+                        <TableCell>Account Number</TableCell>
+                      </>
+                    )}
+                    {paymentData.paymentMethod === 'card' && (
+                      <TableCell>Card Number</TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow hover>
+                    <TableCell>{getPaymentMethod()}</TableCell>
+                    <TableCell>{getPaymentFrequency()}</TableCell>
+                    <TableCell>{getPremiumAmount()}</TableCell>
+                    {paymentData.paymentMethod === 'ach' && (
+                      <>
+                        <TableCell>{getBankName()}</TableCell>
+                        <TableCell>{getMaskedAccountNumber()}</TableCell>
+                      </>
+                    )}
+                    {paymentData.paymentMethod === 'card' && (
+                      <TableCell>{getMaskedAccountNumber()}</TableCell>
+                    )}
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2">Cash With Application</Typography>
+              <Typography variant="body1">
+                {paymentData.initialPaymentOption === 'cash_with_app' ? '✅ Selected' : '❌ Not Selected'}
+              </Typography>
+            </Box>
           </Grid>
         </Grid>
       </Paper>
 
+      {/* Policy Provisions */}
       <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
           Understanding of Policy Provisions

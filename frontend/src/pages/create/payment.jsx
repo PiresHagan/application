@@ -38,9 +38,10 @@ function Payment({ applicationNumber, onStepComplete }) {
         checkSpecimen: savedPaymentData.checkSpecimen || null,
         cardInfo: savedPaymentData.cardInfo || null,
         authorizeAutoWithdrawal: savedPaymentData.authorizeAutoWithdrawal || false,
-        initialPaymentOption: savedPaymentData.initialPaymentOption || 'upon_approval',
+        initialPaymentOption: savedPaymentData.initialPaymentOption || 'with_application',
         deferredDate: savedPaymentData.deferredDate || null,
         authorizePayments: savedPaymentData.authorizePayments || false,
+        cashWithApplication: savedPaymentData.cashWithApplication || false,
         payors: savedPaymentData.payors?.length > 0
             ? savedPaymentData.payors
             : [{ id: 1, payorId: '', allocation: 100 }]
@@ -248,20 +249,41 @@ function Payment({ applicationNumber, onStepComplete }) {
                     Initial Payment
                 </Typography>
 
+                <FormControlLabel
+                    control={
+                        <Checkbox
+                            checked={paymentData.cashWithApplication}
+                            onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                handlePaymentDataChange('cashWithApplication', isChecked);
+                                if (isChecked) {
+                                    handlePaymentDataChange('initialPaymentOption', 'cash_with_app');
+                                } else {
+                                    handlePaymentDataChange('initialPaymentOption', 'with_application');
+                                }
+                            }}
+                        />
+                    }
+                    label="Cash With Application"
+                    sx={{ mb: 1 }}
+                />
+
                 <RadioGroup
                     value={paymentData.initialPaymentOption}
                     onChange={(e) => handlePaymentDataChange('initialPaymentOption', e.target.value)}
                     sx={{ mb: 3 }}
                 >
                     <FormControlLabel
+                        value="with_application"
+                        control={<Radio />}
+                        label="Pay first premium with application"
+                        disabled={paymentData.cashWithApplication}
+                    />
+                    <FormControlLabel
                         value="upon_approval"
                         control={<Radio />}
                         label="Charge first premium upon approval"
-                    />
-                    <FormControlLabel
-                        value="defer"
-                        control={<Radio />}
-                        label="Defer first payment to a specific date"
+                        disabled={paymentData.cashWithApplication}
                     />
                 </RadioGroup>
             </Paper>

@@ -8,9 +8,10 @@ const initialState = {
     checkSpecimen: null,
     cardInfo: null,
     authorizeAutoWithdrawal: false,
-    initialPaymentOption: 'upon_approval',
+    initialPaymentOption: 'with_application',
     deferredDate: null,
     authorizePayments: false,
+    cashWithApplication: false,
     payors: []
 };
 
@@ -55,6 +56,18 @@ export const paymentSlice = createSlice({
 
         setInitialPaymentOption: (state, action) => {
             state.initialPaymentOption = action.payload;
+            if (action.payload === 'cash_with_app') {
+                state.cashWithApplication = true;
+            }
+        },
+
+        setCashWithApplication: (state, action) => {
+            state.cashWithApplication = action.payload;
+            if (action.payload) {
+                state.initialPaymentOption = 'cash_with_app';
+            } else if (state.initialPaymentOption === 'cash_with_app') {
+                state.initialPaymentOption = 'with_application';
+            }
         },
 
         setDeferredDate: (state, action) => {
@@ -95,6 +108,7 @@ export const {
     setCheckSpecimen,
     setCardInfo,
     setInitialPaymentOption,
+    setCashWithApplication,
     setDeferredDate,
     setAuthorizePayments,
     setPayors,
