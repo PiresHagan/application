@@ -5,6 +5,7 @@ import Medical from './medical';
 import Beneficiary from './beneficiary';
 import Payment from './payment';
 import Review from './review';
+import Submission from './submission';
 import { Box, Button, Container, Step, StepLabel, Stepper, Typography, Tooltip } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { nextStep, previousStep, setActiveStep, setStepValid } from '../../slices/stepSlice';
@@ -48,7 +49,9 @@ function Create() {
           onStepComplete={(isComplete) => handleStepCompletion(5, isComplete)}
         />;
       case 6:
-        return <></>;
+        return <Submission
+          applicationNumber={applicationNumber}
+        />;
       default:
         return <div>Not Found</div>;
     }

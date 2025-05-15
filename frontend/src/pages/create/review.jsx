@@ -142,6 +142,11 @@ function Review({ applicationNumber, onStepComplete }) {
       return;
     }
     
+    if (onStepComplete) {
+      onStepComplete(true);
+    }
+    
+    toast.success('Application submitted successfully!');
     dispatch(nextStep());
   };
 
