@@ -140,7 +140,13 @@ function Payment({ applicationNumber, onStepComplete }) {
                     paymentMode: paymentData.paymentMode,
                     paymentMethod: paymentData.paymentMethod,
                     initialPaymentOption: paymentData.initialPaymentOption,
-                    payors: paymentData.payors,
+                    payors: paymentData.payors.map(payor => ({
+                        id: payor.id,
+                        payorId: payor.payorId,
+                        allocation: payor.allocation,
+                        clientGUID: payor.payorDetails?.clientGUID,
+                        roleGUID: payor.payorDetails?.roleGUID
+                    })),
                     // Only include payment method specific data
                     ...(paymentData.paymentMethod === 'ach' && {
                         bankAccountType: paymentData.bankAccountType,

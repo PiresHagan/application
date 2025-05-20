@@ -356,13 +356,10 @@ function BeneficiarySection({
         );
         setContingentBeneficiaries(updatedBeneficiaries);
 
-        // Get the updated row data to send to parent
         const updatedRow = updatedBeneficiaries.find(row => row && row.id === id);
         if (updatedRow && updatedRow.beneficiaryId && onUpdateBeneficiary) {
-          // Update the Redux store with the new relationship
           onUpdateBeneficiary(
             updatedRow.beneficiaryId,
-            value, // Updated relationship value
             updatedRow.allocation,
             type
           );
@@ -381,16 +378,14 @@ function BeneficiarySection({
         );
         setPrimaryBeneficiaries(updatedBeneficiaries);
 
-        // Get the updated row data to send to parent
         const updatedRow = updatedBeneficiaries.find(row => row && row.id === id);
         if (updatedRow && updatedRow.beneficiaryId && onUpdateBeneficiary) {
-          // Update the Redux store
           onUpdateBeneficiary(
             updatedRow.beneficiaryId,
             updatedRow.relationship,
             updatedRow.allocation,
             type,
-            value // Pass relatedInsured value
+            value
           );
         }
       } else {
@@ -408,7 +403,7 @@ function BeneficiarySection({
             updatedRow.relationship,
             updatedRow.allocation,
             type,
-            value // Pass relatedInsured value
+            value
           );
         }
       }

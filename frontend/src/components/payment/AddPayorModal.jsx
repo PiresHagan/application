@@ -245,16 +245,41 @@ function AddPayorModal({ open, onClose, onSave, payors, editingPayor, applicatio
         }
 
         try {
+            let savedPayor = { ...payor };
+            
             if (applicationNumber) {
                 const ownerRequest = {
                     applicationFormNumber: applicationNumber,
                     owners: [formatPayorAsOwner(payor)]
                 };
 
-                await saveOwners(ownerRequest).unwrap();
+                const response = await saveOwners(ownerRequest).unwrap();
+                
+                if (response && response.owners && response.owners.length > 0) {
+                    const ownerData = response.owners[0];
+                    
+                    savedPayor = {
+                        ...payor,
+                        clientGUID: ownerData.clientGUID,
+                        roleGUID: ownerData.roleGUID,
+                        applicationFormGUID: ownerData.applicationFormGUID,
+                        statusCode: ownerData.statusCode,
+                        addresses: ownerData.addresses?.map(addr => ({
+                            addressGUID: addr.addressGUID,
+                            typeCode: addr.typeCode,
+                            statusCode: addr.statusCode,
+                            addressLine1: addr.addressLine1,
+                            addressLine2: addr.addressLine2,
+                            city: addr.city,
+                            stateCode: addr.stateCode,
+                            countryCode: addr.countryCode,
+                            zipCode: addr.zipCode
+                        }))
+                    };
+                }
             }
 
-            onSave(payor);
+            onSave(savedPayor);
             onClose();
         } catch (error) {
             console.error('Error saving payor:', error);

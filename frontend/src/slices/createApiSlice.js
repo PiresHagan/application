@@ -12,6 +12,9 @@ export const createApiSlice = apiSlice.injectEndpoints({
         method: 'POST',
         body: ownerData,
       }),
+      transformResponse: (response) => {
+        return response;
+      },
     }),
     saveInsured: builder.mutation({
       query: (data) => ({
@@ -108,6 +111,13 @@ export const createApiSlice = apiSlice.injectEndpoints({
         body: paymentData
       })
     }),
+    saveBeneficiaryAllocations: builder.mutation({
+      query: (data) => ({
+        url: '/api/beneficiaries/allocations',
+        method: 'POST',
+        body: data
+      })
+    }),
   }),
 });
 
@@ -127,4 +137,5 @@ export const {
   useSaveMedicalDataMutation,
   useGetApplicationPremiumQuery,
   useSavePaymentDataMutation,
+  useSaveBeneficiaryAllocationsMutation,
 } = createApiSlice; 

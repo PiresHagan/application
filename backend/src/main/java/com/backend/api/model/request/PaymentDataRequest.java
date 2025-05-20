@@ -29,5 +29,7 @@ public class PaymentDataRequest {
         private Integer id;
         private String payorId;
         private Double allocation;
+        private String clientGUID;
+        private String roleGUID;
     }
 } 

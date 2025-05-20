@@ -9,7 +9,7 @@ import {
   Grid,
 } from '@mui/material';
 import BeneficiarySection from '../../components/beneficiary/BeneficiarySection';
-import { useGetDropdownValuesQuery } from '../../slices/createApiSlice';
+import { useGetDropdownValuesQuery, useSaveBeneficiaryAllocationsMutation } from '../../slices/createApiSlice';
 import {
   addBeneficiary,
   removeBeneficiary,
@@ -22,6 +22,7 @@ import { toast } from 'react-toastify';
 function Beneficiary({ applicationNumber, onStepComplete }) {
   const dispatch = useDispatch();
   const { data: dropdownValues = {} } = useGetDropdownValuesQuery();
+  const [saveBeneficiaryAllocations, { isLoading: isSavingAllocations }] = useSaveBeneficiaryAllocationsMutation();
 
   // Get coverage data from redux store
   const baseCoverage = useSelector(state => state.coverage.base || {});
@@ -131,7 +132,20 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
     }));
   };
 
-  const handleSaveAndContinue = () => {
+  // Get the relationship label based on the code
+  const getRelationshipLabel = (relationshipCode) => {
+    const relationships = {
+      '01': 'Spouse',
+      '02': 'Child',
+      '03': 'Parent',
+      '04': 'Business Partner',
+      '05': 'Employee',
+      '06': 'Other'
+    };
+    return relationships[relationshipCode] || relationshipCode;
+  };
+
+  const handleSaveAndContinue = async () => {
     // Validate that at least one beneficiary exists for each coverage
     const baseHasBeneficiary = coverageBeneficiaries['base']?.primary?.length > 0;
 
@@ -163,7 +177,126 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
       return;
     }
 
-    dispatch(nextStep());
+    try {
+      const beneficiaryAllocations = [];
+
+      if (coverageBeneficiaries['base']) {
+        // Primary beneficiaries
+        coverageBeneficiaries['base'].primary?.forEach(beneficiaryAllocation => {
+          const beneficiary = beneficiaries.find(b => b.id === beneficiaryAllocation.beneficiaryId);
+          if (beneficiary && beneficiary.roleGUID) {
+            beneficiaryAllocations.push({
+              roleGUID: beneficiary.roleGUID,
+              coverageId: 'base',
+              type: 'primary',
+              relationshipToInsured: getRelationshipLabel(beneficiaryAllocation.relationship),
+              relatedInsured: beneficiaryAllocation.relatedInsured || formatInsuredName(baseCoverage.insured1),
+              allocation: beneficiaryAllocation.allocation?.toString() || '100'
+            });
+          }
+        });
+
+        // Contingent beneficiaries
+        coverageBeneficiaries['base'].contingent?.forEach(beneficiaryAllocation => {
+          const beneficiary = beneficiaries.find(b => b.id === beneficiaryAllocation.beneficiaryId);
+          if (beneficiary && beneficiary.roleGUID) {
+            beneficiaryAllocations.push({
+              roleGUID: beneficiary.roleGUID,
+              coverageId: 'base',
+              type: 'contingent',
+              relationshipToInsured: getRelationshipLabel(beneficiaryAllocation.relationship),
+              relatedInsured: beneficiaryAllocation.relatedInsured || formatInsuredName(baseCoverage.insured1),
+              allocation: beneficiaryAllocation.allocation?.toString() || '100'
+            });
+          }
+        });
+      }
+
+      if (Array.isArray(additionalCoverages)) {
+        additionalCoverages.forEach(coverage => {
+          if (coverage && coverage.id && coverageBeneficiaries[coverage.id]) {
+            coverageBeneficiaries[coverage.id].primary?.forEach(beneficiaryAllocation => {
+              const beneficiary = beneficiaries.find(b => b.id === beneficiaryAllocation.beneficiaryId);
+              if (beneficiary && beneficiary.roleGUID) {
+                beneficiaryAllocations.push({
+                  roleGUID: beneficiary.roleGUID,
+                  coverageId: coverage.id,
+                  type: 'primary',
+                  relationshipToInsured: getRelationshipLabel(beneficiaryAllocation.relationship),
+                  relatedInsured: beneficiaryAllocation.relatedInsured || formatInsuredName(coverage.insured1),
+                  allocation: beneficiaryAllocation.allocation?.toString() || '100'
+                });
+              }
+            });
+
+            coverageBeneficiaries[coverage.id].contingent?.forEach(beneficiaryAllocation => {
+              const beneficiary = beneficiaries.find(b => b.id === beneficiaryAllocation.beneficiaryId);
+              if (beneficiary && beneficiary.roleGUID) {
+                beneficiaryAllocations.push({
+                  roleGUID: beneficiary.roleGUID,
+                  coverageId: coverage.id,
+                  type: 'contingent',
+                  relationshipToInsured: getRelationshipLabel(beneficiaryAllocation.relationship),
+                  relatedInsured: beneficiaryAllocation.relatedInsured || formatInsuredName(coverage.insured1),
+                  allocation: beneficiaryAllocation.allocation?.toString() || '100'
+                });
+              }
+            });
+          }
+        });
+      }
+
+      // Process riders
+      if (Array.isArray(riders)) {
+        riders.filter(rider => rider && rider.type && rider.type.toLowerCase().includes('accidental'))
+          .forEach(rider => {
+            const riderId = `rider-${rider.id}`;
+            if (coverageBeneficiaries[riderId]) {
+              coverageBeneficiaries[riderId].primary?.forEach(beneficiaryAllocation => {
+                const beneficiary = beneficiaries.find(b => b.id === beneficiaryAllocation.beneficiaryId);
+                if (beneficiary && beneficiary.roleGUID) {
+                  beneficiaryAllocations.push({
+                    roleGUID: beneficiary.roleGUID,
+                    coverageId: riderId,
+                    type: 'primary',
+                    relationshipToInsured: getRelationshipLabel(beneficiaryAllocation.relationship),
+                    relatedInsured: beneficiaryAllocation.relatedInsured || formatInsuredName(rider.selectedPerson),
+                    allocation: beneficiaryAllocation.allocation?.toString() || '100'
+                  });
+                }
+              });
+
+              coverageBeneficiaries[riderId].contingent?.forEach(beneficiaryAllocation => {
+                const beneficiary = beneficiaries.find(b => b.id === beneficiaryAllocation.beneficiaryId);
+                if (beneficiary && beneficiary.roleGUID) {
+                  beneficiaryAllocations.push({
+                    roleGUID: beneficiary.roleGUID,
+                    coverageId: riderId,
+                    type: 'contingent',
+                    relationshipToInsured: getRelationshipLabel(beneficiaryAllocation.relationship),
+                    relatedInsured: beneficiaryAllocation.relatedInsured || formatInsuredName(rider.selectedPerson),
+                    allocation: beneficiaryAllocation.allocation?.toString() || '100'
+                  });
+                }
+              });
+            }
+          });
+      }
+
+      if (beneficiaryAllocations.length > 0) {
+        await saveBeneficiaryAllocations({
+          applicationFormNumber: applicationNumber,
+          beneficiaryAllocations
+        }).unwrap();
+        
+        toast.success('Beneficiary allocations saved successfully');
+      }
+
+      dispatch(nextStep());
+    } catch (error) {
+      console.error('Error saving beneficiary allocations:', error);
+      toast.error(`Error saving beneficiary allocations: ${error.message || 'Unknown error'}`);
+    }
   };
 
   return (
@@ -256,8 +389,9 @@ function Beneficiary({ applicationNumber, onStepComplete }) {
         <Button
           variant="contained"
           onClick={handleSaveAndContinue}
+          disabled={isSavingAllocations}
         >
-          Next
+          {isSavingAllocations ? 'Saving...' : 'Next'}
         </Button>
       </Box>
     </Box>

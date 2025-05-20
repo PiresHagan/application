@@ -174,16 +174,43 @@ function AddBeneficiaryModal({ open, onClose, onSave, dropdownValues, beneficiar
     }
 
     try {
+      let savedBeneficiary = { ...beneficiary };
+      
       if (applicationNumber) {
         const ownerRequest = {
           applicationFormNumber: applicationNumber,
           owners: [formatBeneficiaryAsOwner(beneficiary)]
         };
         
-        await saveOwners(ownerRequest).unwrap();
+        const response = await saveOwners(ownerRequest).unwrap();
+        
+        // Get the returned data with GUIDs
+        if (response && response.owners && response.owners.length > 0) {
+          const ownerData = response.owners[0];
+          
+          // Extract all useful properties from the response
+          savedBeneficiary = {
+            ...beneficiary,
+            clientGUID: ownerData.clientGUID,
+            roleGUID: ownerData.roleGUID,
+            applicationFormGUID: ownerData.applicationFormGUID,
+            statusCode: ownerData.statusCode,
+            addresses: ownerData.addresses?.map(addr => ({
+              addressGUID: addr.addressGUID,
+              typeCode: addr.typeCode,
+              statusCode: addr.statusCode,
+              addressLine1: addr.addressLine1,
+              addressLine2: addr.addressLine2,
+              city: addr.city,
+              stateCode: addr.stateCode,
+              countryCode: addr.countryCode,
+              zipCode: addr.zipCode
+            }))
+          };
+        }
       }
       
-      onSave(beneficiary);
+      onSave(savedBeneficiary);
       onClose();
     } catch (error) {
       console.error('Error saving beneficiary:', error);

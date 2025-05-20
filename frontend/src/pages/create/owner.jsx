@@ -347,6 +347,36 @@ function Owner({ applicationNumber, onStepComplete }) {
       };
 
       const response = await saveOwners(ownerRequest).unwrap();
+      
+      if (response && response.owners && response.owners.length > 0) {
+        const updatedOwners = owners.map((owner, index) => {
+          if (index < response.owners.length) {
+            const responseOwner = response.owners[index];
+            return {
+              ...owner,
+              clientGUID: responseOwner.clientGUID,
+              roleGUID: responseOwner.roleGUID,
+              applicationFormGUID: responseOwner.applicationFormGUID,
+              statusCode: responseOwner.statusCode,
+              addresses: responseOwner.addresses?.map(addr => ({
+                addressGUID: addr.addressGUID,
+                typeCode: addr.typeCode,
+                statusCode: addr.statusCode,
+                addressLine1: addr.addressLine1,
+                addressLine2: addr.addressLine2,
+                city: addr.city,
+                stateCode: addr.stateCode,
+                countryCode: addr.countryCode,
+                zipCode: addr.zipCode
+              }))
+            };
+          }
+          return owner;
+        });
+        
+        dispatch(setOwners(updatedOwners));
+      }
+      
       toast.success('Owners saved successfully!');
       dispatch(nextStep());
     } catch (error) {

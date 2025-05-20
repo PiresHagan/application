@@ -1,6 +1,7 @@
 package com.backend.api.controller;
 
 import com.backend.api.dto.OwnerSaveRequest;
+import com.backend.api.dto.OwnerSaveResponse;
 import com.backend.api.service.OwnerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +18,9 @@ public class OwnerController {
     private OwnerService ownerService;
     
     @PostMapping
-    public ResponseEntity<Void> saveOwners(@RequestBody OwnerSaveRequest request) {
+    public ResponseEntity<OwnerSaveResponse> saveOwners(@RequestBody OwnerSaveRequest request) {
         log.info("Received owner save request: {}", request);
-        ownerService.saveOwners(request);
-        return ResponseEntity.ok().build();
+        OwnerSaveResponse response = ownerService.saveOwners(request);
+        return ResponseEntity.ok(response);
     }
 } 

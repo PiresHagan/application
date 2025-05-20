@@ -12,7 +12,8 @@ const initialState = {
     deferredDate: null,
     authorizePayments: false,
     cashWithApplication: false,
-    payors: []
+    payors: [],
+    payorDetails: {}
 };
 
 export const paymentSlice = createSlice({
@@ -20,7 +21,18 @@ export const paymentSlice = createSlice({
     initialState,
     reducers: {
         setPaymentData: (state, action) => {
-            return { ...state, ...action.payload };
+            const newState = { ...state, ...action.payload };
+            
+            if (action.payload.payors) {
+                newState.payorDetails = { ...state.payorDetails };
+                action.payload.payors.forEach(payor => {
+                    if (payor.payorDetails) {
+                        newState.payorDetails[payor.payorId] = payor.payorDetails;
+                    }
+                });
+            }
+            
+            return newState;
         },
 
         setPaymentMode: (state, action) => {
@@ -80,6 +92,12 @@ export const paymentSlice = createSlice({
 
         setPayors: (state, action) => {
             state.payors = action.payload;
+            
+            action.payload.forEach(payor => {
+                if (payor.payorDetails) {
+                    state.payorDetails[payor.payorId] = payor.payorDetails;
+                }
+            });
         },
 
         addPayor: (state, action) => {
@@ -90,9 +108,19 @@ export const paymentSlice = createSlice({
             } else {
                 state.payors.push(action.payload);
             }
+            
+            if (action.payload.payorDetails) {
+                state.payorDetails[action.payload.payorId] = action.payload.payorDetails;
+            }
         },
 
         removePayor: (state, action) => {
+            const payorToRemove = state.payors.find(p => p.id === action.payload);
+            
+            if (payorToRemove && payorToRemove.payorId && state.payorDetails[payorToRemove.payorId]) {
+                delete state.payorDetails[payorToRemove.payorId];
+            }
+            
             state.payors = state.payors.filter(p => p.id !== action.payload);
         },
 

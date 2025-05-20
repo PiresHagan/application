@@ -116,7 +116,56 @@ public class PaymentService {
                 saveApplicationFormDetail(applicationFormGUID, "AuthorizePayments", null, authorizePayments ? 1 : 0, null, null);
             }
             
-            // TODO: Save payors and payment method specific details in separate tables
+            // Save payor information
+            if (paymentData.getPayors() != null && !paymentData.getPayors().isEmpty()) {
+                for (PaymentDataRequest.PayorInfo payor : paymentData.getPayors()) {
+                    if (payor.getRoleGUID() != null) {
+                        saveRoleDetail(payor.getRoleGUID(), "Allocation", String.valueOf(payor.getAllocation()));
+                        
+                        saveRoleDetail(payor.getRoleGUID(), "ApplicationFormGUID", applicationFormGUID);
+                        
+                        saveRoleDetail(payor.getRoleGUID(), "PayorType", "Primary");
+                    }
+                }
+            }
+            
+            if ("ach".equals(paymentMethod)) {
+                saveApplicationFormDetail(applicationFormGUID, "BankAccountType", null, null, paymentData.getBankAccountType(), null);
+                
+                if (paymentData.getBankAccountInfo() != null) {
+                    Map<String, Object> bankInfo = paymentData.getBankAccountInfo();
+                    if (bankInfo.get("routingNumber") != null) {
+                        saveApplicationFormDetail(applicationFormGUID, "RoutingNumber", null, null, bankInfo.get("routingNumber").toString(), null);
+                    }
+                    if (bankInfo.get("accountNumber") != null) {
+                        saveApplicationFormDetail(applicationFormGUID, "AccountNumber", null, null, bankInfo.get("accountNumber").toString(), null);
+                    }
+                    if (bankInfo.get("accountType") != null) {
+                        saveApplicationFormDetail(applicationFormGUID, "AccountType", null, null, bankInfo.get("accountType").toString(), null);
+                    }
+                    if (bankInfo.get("accountHolderName") != null) {
+                        saveApplicationFormDetail(applicationFormGUID, "AccountHolderName", null, null, bankInfo.get("accountHolderName").toString(), null);
+                    }
+                }
+                
+                saveApplicationFormDetail(applicationFormGUID, "HasCheckSpecimen", null, paymentData.getHasCheckSpecimen() ? 1 : 0, null, null);
+                saveApplicationFormDetail(applicationFormGUID, "AuthorizeAutoWithdrawal", null, paymentData.getAuthorizeAutoWithdrawal() ? 1 : 0, null, null);
+            } else if ("card".equals(paymentMethod) && paymentData.getCardInfo() != null) {
+                Map<String, Object> cardInfo = paymentData.getCardInfo();
+                if (cardInfo.get("cardNumber") != null) {
+                    String cardNumber = cardInfo.get("cardNumber").toString();
+                    saveApplicationFormDetail(applicationFormGUID, "CardNumber", null, null, cardNumber, null);
+                }
+                if (cardInfo.get("cardholderName") != null) {
+                    saveApplicationFormDetail(applicationFormGUID, "CardholderName", null, null, cardInfo.get("cardholderName").toString(), null);
+                }
+                if (cardInfo.get("expirationDate") != null) {
+                    saveApplicationFormDetail(applicationFormGUID, "CardExpirationDate", null, null, cardInfo.get("expirationDate").toString(), null);
+                }
+                if (cardInfo.get("cvv") != null) {
+                    saveApplicationFormDetail(applicationFormGUID, "CardCVV", null, null, cardInfo.get("cvv").toString(), null);
+                }
+            }
             
             result.put("success", true);
             result.put("message", "Payment data saved successfully");
@@ -202,6 +251,29 @@ public class PaymentService {
                 return "05";
             default:
                 return "01";
+        }
+    }
+    
+    private void saveRoleDetail(String roleGUID, String fieldName, String textValue) {
+        // Check if this field already exists
+        Integer count = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM frroledetails WHERE RoleGUID = ? AND FieldName = ?",
+            Integer.class,
+            roleGUID, fieldName
+        );
+        
+        if (count != null && count > 0) {
+            // Update existing record
+            jdbcTemplate.update(
+                "UPDATE frroledetails SET TextValue = ? WHERE RoleGUID = ? AND FieldName = ?",
+                textValue, roleGUID, fieldName
+            );
+        } else {
+            // Insert new record
+            jdbcTemplate.update(
+                "INSERT INTO frroledetails (RoleGUID, FieldName, TextValue) VALUES (?, ?, ?)",
+                roleGUID, fieldName, textValue
+            );
         }
     }
 } 

@@ -1,6 +1,7 @@
 package com.backend.api.service;
 
 import com.backend.api.dto.OwnerSaveRequest;
+import com.backend.api.dto.OwnerSaveResponse;
 import com.backend.api.dto.OwnerSaveRequest.OwnerDTO;
 import com.backend.api.dto.OwnerSaveRequest.AddressDTO;
 import com.backend.api.entity.User;
@@ -13,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -25,11 +29,13 @@ public class OwnerService {
     @Autowired
     private UserRepository userRepository;
 
-    public void saveOwners(OwnerSaveRequest request) {
+    public OwnerSaveResponse saveOwners(OwnerSaveRequest request) {
         String applicationFormNumber = request.getApplicationFormNumber();
         
         String currentUsername = SecurityUtils.getCurrentUsername();
         log.info("Current logged-in user: {}", currentUsername);
+        
+        List<OwnerSaveResponse.OwnerResponseDTO> ownerResponses = new ArrayList<>();
         
         for (OwnerDTO owner : request.getOwners()) {
             String clientGUID = UUID.randomUUID().toString();
@@ -77,33 +83,18 @@ public class OwnerService {
                 owner.getStateCode(), owner.getSsn(), owner.getBusinessRegistrationNumber()
             );
             
+            String roleCode = owner.getRoleCode() != null ? owner.getRoleCode() : "01";
+            
             jdbcTemplate.update("""
                 INSERT INTO frrole (
                     RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, StatusCode
                 ) VALUES (?, ?, ?, ?, ?)
                 """,
-                roleGUID, owner.getRoleCode() != null ? owner.getRoleCode() : "01", clientGUID, applicationFormGUID, "01"
+                roleGUID, roleCode, clientGUID, applicationFormGUID, "01"
             );
             
-            if (currentUsername != null) {
-                User currentUser = userRepository.findByEmail(currentUsername).orElse(null);
-                if (currentUser != null) {
-                    log.info("Saving agent role for user: {}", currentUser.getName());
-                    
-                    String agentClientGUID = getOrCreateClientForUser(currentUser);
-                    
-                    String agentRoleGUID = UUID.randomUUID().toString();
-                    jdbcTemplate.update("""
-                        INSERT INTO frrole (
-                            RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, StatusCode
-                        ) VALUES (?, ?, ?, ?, ?)
-                        """,
-                        agentRoleGUID, "03", agentClientGUID, applicationFormGUID, "01"
-                    );
-                    log.info("Agent role saved with GUID: {}", agentRoleGUID);
-                }
-            }
-            
+            // Process addresses
+            List<OwnerSaveResponse.AddressDTO> savedAddresses = new ArrayList<>();
             for (AddressDTO address : owner.getAddresses()) {
                 String addressGUID = UUID.randomUUID().toString();
                 
@@ -125,8 +116,72 @@ public class OwnerService {
                     address.getCity(), address.getStateCode(), address.getCountryCode(),
                     address.getZipCode()
                 );
+                
+                // Create address response object
+                OwnerSaveResponse.AddressDTO addressResponse = new OwnerSaveResponse.AddressDTO(
+                    addressGUID,
+                    address.getTypeCode(),
+                    "01",
+                    address.getAddressLine1(),
+                    address.getAddressLine2(),
+                    address.getCity(),
+                    address.getStateCode(),
+                    address.getCountryCode(),
+                    address.getZipCode()
+                );
+                
+                savedAddresses.add(addressResponse);
+            }
+            
+            // Create complete owner response
+            OwnerSaveResponse.OwnerResponseDTO ownerResponse = new OwnerSaveResponse.OwnerResponseDTO();
+            ownerResponse.setClientGUID(clientGUID);
+            ownerResponse.setRoleGUID(roleGUID);
+            ownerResponse.setTypeCode(owner.getTypeCode());
+            ownerResponse.setFirstName(owner.getFirstName());
+            ownerResponse.setLastName(owner.getLastName());
+            ownerResponse.setDateOfBirth(owner.getDateOfBirth());
+            ownerResponse.setGender(owner.getGender());
+            ownerResponse.setTobacco(owner.getTobacco());
+            ownerResponse.setSsn(owner.getSsn());
+            ownerResponse.setCompanyName(owner.getCompanyName());
+            ownerResponse.setBusinessRegistrationNumber(owner.getBusinessRegistrationNumber());
+            ownerResponse.setCountryCode(owner.getCountryCode());
+            ownerResponse.setStateCode(owner.getStateCode());
+            ownerResponse.setEmployer(null); // Not in current schema
+            ownerResponse.setOccupation(null); // Not in current schema
+            ownerResponse.setNetWorth(null); // Not in current schema
+            ownerResponse.setAnnualIncome(null); // Not in current schema
+            ownerResponse.setEmail(null); // Not in current schema
+            ownerResponse.setPhone(null); // Not in current schema
+            ownerResponse.setApplicationFormGUID(applicationFormGUID);
+            ownerResponse.setRoleCode(roleCode);
+            ownerResponse.setStatusCode("01");
+            ownerResponse.setAddresses(savedAddresses);
+            
+            ownerResponses.add(ownerResponse);
+            
+            if (currentUsername != null) {
+                User currentUser = userRepository.findByEmail(currentUsername).orElse(null);
+                if (currentUser != null) {
+                    log.info("Saving agent role for user: {}", currentUser.getName());
+                    
+                    String agentClientGUID = getOrCreateClientForUser(currentUser);
+                    
+                    String agentRoleGUID = UUID.randomUUID().toString();
+                    jdbcTemplate.update("""
+                        INSERT INTO frrole (
+                            RoleGUID, RoleCode, ClientGUID, ApplicationFormGUID, StatusCode
+                        ) VALUES (?, ?, ?, ?, ?)
+                        """,
+                        agentRoleGUID, "03", agentClientGUID, applicationFormGUID, "01"
+                    );
+                    log.info("Agent role saved with GUID: {}", agentRoleGUID);
+                }
             }
         }
+        
+        return new OwnerSaveResponse(ownerResponses);
     }
     
     /**

@@ -52,11 +52,16 @@ function PayorSection({ payors = [], onChange, coverageOwners = [], applicationN
 
         setStoredPayors(updatedPayors);
 
-        const updatedRows = payors.map(row =>
-            row && row.id === currentPayorRowId
-                ? { ...row, payorId: payor.id }
-                : row
-        );
+        const updatedRows = payors.map(row => {
+            if (row && row.id === currentPayorRowId) {
+                return { 
+                    ...row, 
+                    payorId: payor.id,
+                    payorDetails: payor
+                };
+            }
+            return row;
+        });
 
         onChange(updatedRows);
     };
